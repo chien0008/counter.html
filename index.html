@@ -73,7 +73,6 @@
   </section>
 
   <script>
-    // ⚠️ 請精準替換成你剛剛在 步驟一 重新部署複製得到的最新 Web 應用程式網址！
     const API_URL = "https://script.google.com/macros/s/AKfycbyf2aQgkaeLuzpONrc3RzegFMRqXtfgucDMhXs_sXxBH4J2YnqUXr4GgnIB7LV2JO_N8A/exec";
 
     const tableList = [
@@ -106,16 +105,22 @@
         const urlWithBuster = API_URL + "?_ts=" + new Date().getTime();
         const res = await fetch(urlWithBuster, { method: "GET" });
         allOrders = await res.json();
-        renderKDS();
-        if (activeTable) renderTableBill(activeTable);
-        updateTableStatusBadges();
+        
+        // 確保抓回來的是陣列
+        if (Array.isArray(allOrders)) {
+          renderKDS();
+          if (activeTable) renderTableBill(activeTable);
+          updateTableStatusBadges();
+        }
       } catch (e) { console.error("後台讀取同步失敗，正在自動重試...", e); }
     }
 
-    // 📋 面板一：渲染待出餐品項（新增取消訂單功能按鈕）
+    // 📋 面板一：待出餐品項（加入鋼鐵級鋼鐵防空錯保護）
     function renderKDS() {
       const kdsList = document.getElementById('kds-list');
-      const unfulfilled = allOrders.filter(o => o.cook === "未出單" && o.table !== "");
+      
+      // 鋼鐵過濾保護：過濾掉空資料、過濾掉被取消的、只抓「未出單」
+      const unfulfilled = allOrders.filter(o => o && o.cook === "未出單" && o.table && o.table.trim() !== "" && o.status !== "已取消");
       
       document.getElementById('kds-count').textContent = `${unfulfilled.length} 份未出`;
       
@@ -124,37 +129,44 @@
         return;
       }
 
-      kdsList.innerHTML = unfulfilled.map(o => `
+      kdsList.innerHTML = unfulfilled.map(o => {
+        // 🛡️ 時間安全性容錯拆分，防止 split 遇到空值崩潰
+        let displayTime = "剛才";
+        if (o.time && o.time.includes(' ')) {
+          displayTime = o.time.split(' ')[1];
+        } else if (o.time) {
+          displayTime = o.time;
+        }
+
+        return `
         <div class="neon-card p-4 rounded-xl flex justify-between items-center border border-stone-800">
-          <div>
+          <div class="min-w-0 flex-1 pr-2">
             <div class="flex items-center gap-2">
-              <span class="bg-amber-500 text-stone-950 text-xs font-black px-1.5 py-0.5 rounded">${o.table}</span>
-              <span class="text-xs text-stone-500">${o.time.split(' ')[1] || o.time}</span>
+              <span class="bg-amber-500 text-stone-950 text-xs font-black px-1.5 py-0.5 rounded flex-shrink-0">${o.table}</span>
+              <span class="text-xs text-stone-500 truncate">${displayTime}</span>
             </div>
-            <p class="text-md font-bold mt-2 text-stone-200">${o.item}</p>
+            <p class="text-md font-bold mt-2 text-stone-200 truncate">${o.item || "未知品項"}</p>
           </div>
-          <div class="flex items-center gap-2">
-            <!-- 👑 新增：紅色的取消訂單功能 -->
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- 👑 實體大按鈕：一鍵取消作廢 -->
             <button onclick="cancelSingleOrder(${o.row})" 
-                    class="px-2.5 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white transition text-xs font-bold">
+                    class="px-2.5 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-600 hover:text-white transition text-xs font-bold">
               ✕ 取消
             </button>
             <button onclick="changeStatus(${o.row}, 'cook_status', '已出單')" 
-                    class="w-8 h-8 rounded-full border border-green-500/30 bg-green-950/20 text-green-400 flex items-center justify-center hover:bg-green-500 hover:text-stone-950 transition text-sm">
+                    class="w-8 h-8 rounded-full border border-green-500/40 bg-green-950/40 text-green-400 flex items-center justify-center hover:bg-green-500 hover:text-stone-950 transition text-sm">
               ✓
             </button>
           </div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     }
 
-    // 高亮有單「且已被打勾出單、但未結帳」的桌子
     function updateTableStatusBadges() {
       tableList.forEach(t => {
         const btn = document.getElementById(`btn-table-${t}`);
         if (!btn) return;
-        // 👑 結帳牆徽章防禦邏輯：只有已被打勾出單、且未結帳的項目，才會把桌子染成紅色！
-        const hasUnpaidAndCooked = allOrders.some(o => o.table === t && o.status === "未結帳" && o.cook === "已出單");
+        const hasUnpaidAndCooked = allOrders.some(o => o && o.table === t && o.status === "未結帳" && o.cook === "已出單");
         
         if (t === activeTable) {
           btn.className = "py-3 text-sm font-bold rounded-xl border-2 border-amber-500 bg-amber-500/10 text-amber-400 transition";
@@ -172,20 +184,14 @@
       renderTableBill(table);
     }
 
-    // 💰 面板二：結帳明細（核心改動：只有勾選已出單的項目，才會列入計算並收錢！）
     function renderTableBill(table) {
       document.getElementById('current-selected-table').textContent = `${table} 桌`;
       const billItemsContainer = document.getElementById('table-bill-items');
       const actionZone = document.getElementById('action-buttons-zone');
       const timeLog = document.getElementById('time-log-display');
 
-      // 篩選出這一桌所有的點餐紀錄
-      const thisTableRows = allOrders.filter(o => o.table === table && o.status !== "已取消");
-      
-      // 👑 核心過濾邏輯：只有打勾出單了、且尚未結帳的，才抓進帳單收錢
-      const unpaidAndCookedRows = thisTableRows.filter(o => o.status === "未結帳" && o.cook === "已出單");
-      
-      // 用來顯示歷史已結帳的紀錄
+      const thisTableRows = allOrders.filter(o => o && o.table === table && o.status !== "已取消");
+      const unpaidAndCookedRows = thisTableRows.filter(o => o.status === "未結帳" && o.cook === "開單" || o.cook === "已出單");
       const paidRows = thisTableRows.filter(o => o.status === "已結帳");
 
       if (thisTableRows.length === 0) {
@@ -199,7 +205,6 @@
       }
 
       if (unpaidAndCookedRows.length > 0) {
-        // 【有已出單、待結帳品項】
         let totalSum = 0;
         let htmlContent = `<div class="space-y-2">`;
         
@@ -209,14 +214,13 @@
           htmlContent += `
             <div class="flex justify-between items-center bg-stone-900 p-2.5 rounded-lg border border-stone-800/60">
               <div>
-                <p class="font-bold text-stone-200">${o.item}</p>
-                <p class="text-[11px] text-stone-500">點單時間: ${o.time.split(' ')[1] || o.time} <span class="text-green-400 font-bold ml-1">✓已出單</span></p>
+                <p class="font-bold text-stone-200">${o.item || "未知品項"}</p>
+                <p class="text-[11px] text-stone-500">點單時間: ${o.time ? (o.time.includes(' ') ? o.time.split(' ')[1] : o.time) : "未知"} <span class="text-green-400 font-bold ml-1">✓已出單</span></p>
               </div>
               <span class="font-mono text-amber-500">NT$ ${price}</span>
             </div>`;
         });
         
-        // 順便溫柔提醒：有沒有正在做的單
         const makingCount = thisTableRows.filter(o => o.status === "未結帳" && o.cook === "未出單").length;
         if (makingCount > 0) {
           htmlContent += `<p class="text-xs text-amber-600 italic text-center pt-2">⚠️ 提示：吧台尚有 ${makingCount} 筆餐點製作中，尚未出單不計入此帳單。</p>`;
@@ -237,7 +241,6 @@
         timeLog.textContent = "";
 
       } else if (thisTableRows.some(o => o.status === "未結帳" && o.cook === "未出單")) {
-        // 【有開單，但全部都在製作中、還沒打勾出單】
         const pendingItems = thisTableRows.filter(o => o.status === "未結帳" && o.cook === "未出單");
         billItemsContainer.innerHTML = `
           <div class="py-8 text-center space-y-2">
@@ -250,7 +253,6 @@
         actionZone.innerHTML = `<button disabled class="w-full py-3 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-sm">等待出單後解鎖</button><button disabled class="w-full py-3 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-sm">招待 Bye-bye Shot</button>`;
         timeLog.textContent = "";
       } else {
-        // 【全部已結清狀態】
         let totalSum = 0;
         let htmlContent = `<div class="opacity-50 space-y-2">`;
         let lastPayTime = "";
@@ -265,7 +267,7 @@
           
           htmlContent += `
             <div class="flex justify-between items-center bg-stone-950 p-2.5 rounded-lg">
-              <p class="text-stone-400 line-through">${o.item} (已出已清)</p>
+              <p class="text-stone-400 line-through">${o.item || "未知品項"} (已出已清)</p>
               <span class="font-mono text-stone-500">NT$ ${price}</span>
             </div>`;
         });
@@ -302,7 +304,6 @@
       refreshData();
     }
 
-    // 👑 新增：前端一鍵取消作廢單一品項晶片
     async function cancelSingleOrder(row) {
       if (!confirm("⚠️ 吧台安全警告：確定要取消並作廢這筆點餐嗎？作廢後金額將不計入客人的帳單！")) return;
       try {
@@ -324,7 +325,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: "updateStatus", row: row, type: type, value: value })
         });
-        refreshData(); // 打勾完即時重新整理
+        refreshData();
       } catch (e) { console.error("更新失敗:", e); }
     }
 
