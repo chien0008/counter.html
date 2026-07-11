@@ -48,22 +48,22 @@
         <div id="table-buttons-grid" class="grid grid-cols-3 gap-2"></div>
       </div>
 
-      <!-- 👑 全新正名：吧台店員招待紀錄區 -->
-      <div class="bg-stone-900/60 border border-pink-900/30 rounded-2xl p-4 space-y-3 shadow-inner">
+      <!-- 👑 吧台店員招待紀錄區 -->
+      <div class="bg-stone-900/60 border border-pink-500/20 rounded-2xl p-4 space-y-3 shadow-inner">
         <div>
           <h2 class="text-xs font-black text-pink-400 uppercase tracking-widest flex items-center gap-1.5">
             <span>🥃 吧台招待紀錄區</span>
           </h2>
-          <p class="text-[11px] text-stone-500 mt-0.5">點選上方桌號位置，再戳下方店員按鈕即可一鍵送酒留底</p>
+          <p class="text-[11px] text-stone-400 mt-0.5">點選上方桌號位置，再戳下方店員按鈕即可一鍵送酒留底</p>
         </div>
-        <div class="bg-black/30 p-2 text-center text-xs rounded-lg border border-stone-800">
+        <div class="bg-black/40 p-2.5 text-center text-xs rounded-xl border border-stone-800">
           <span class="text-stone-500">當前鎖定招待位置：</span>
-          <span id="shot-target-display" class="font-black text-pink-500">請先選桌</span>
+          <span id="shot-target-display" class="font-black text-pink-500 block mt-1 text-sm">請先選桌</span>
         </div>
         <div class="grid grid-cols-3 gap-2">
-          <button onclick="submit公關Shot('1')" id="shot-staff-1" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95">店員 1</button>
-          <button onclick="submit公關Shot('2')" id="shot-staff-2" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95">店員 2</button>
-          <button onclick="submit公關Shot('3')" id="shot-staff-3" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95">店員 3</button>
+          <button onclick="submit公關Shot('1', event)" id="shot-staff-1" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 1</button>
+          <button onclick="submit公關Shot('2', event)" id="shot-staff-2" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 2</button>
+          <button onclick="submit公關Shot('3', event)" id="shot-staff-3" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 3</button>
         </div>
       </div>
     </div>
@@ -106,6 +106,9 @@
     let allOrders = [];
     let activeTable = "";
     let isFetching = false;
+
+    // 儲存前端樂觀清盤的快照狀態
+    let optimisticPaidTables = {};
 
     function switchTab(tab) {
       document.getElementById('panel-kds').className = tab === 'kds' ? 'block space-y-4' : 'hidden';
@@ -183,11 +186,14 @@
       officialTableNames.forEach(t => {
         const btn = document.getElementById(`btn-table-${t}`);
         if (!btn) return;
+        
+        // 排除掉已經前端「樂觀收款」的桌子，讓它亮燈立刻熄滅
+        const isOptimisticPaid = optimisticPaidTables[t];
         const hasUnpaidAndCooked = allOrders.some(o => o && o.table === t && o.status === "未結帳" && o.cook === "已出單");
         
         if (t === activeTable) {
           btn.className = "py-3 text-sm font-bold rounded-xl border-2 border-amber-500 bg-amber-500/10 text-amber-400 transition";
-        } else if (hasUnpaidAndCooked) {
+        } else if (hasUnpaidAndCooked && !isOptimisticPaid) {
           btn.className = "py-3 text-sm font-bold rounded-xl border border-rose-500/40 bg-rose-950/20 text-rose-400 hover:bg-rose-900/30 transition";
         } else {
           btn.className = "py-3 text-sm font-bold rounded-xl border border-stone-800 bg-stone-900/40 text-stone-500 hover:border-stone-700 hover:text-stone-300 transition";
@@ -208,10 +214,42 @@
       const actionZone = document.getElementById('action-buttons-zone');
       const timeLog = document.getElementById('time-log-display');
 
-      const activeTableRows = allOrders.filter(o => o && o.table === table && o.status === "未結帳");
+      // 🔍 核心防累計：排除在記憶體裡已經按過結帳的，以及只算未結帳的有效單
+      const isOptimisticPaid = optimisticPaidTables[table];
+      const activeTableRows = isOptimisticPaid ? [] : allOrders.filter(o => o && o.table === table && o.status === "未結帳");
+      
       const unpaidAndCookedRows = activeTableRows.filter(o => o.cook === "已出單");
       const makingCount = activeTableRows.filter(o => o.cook === "未出單").length;
 
+      // 🔄 情況 A：吧台剛剛點了現金結帳，完美咬住「下一組客人」的清盤跑道
+      if (isOptimisticPaid) {
+        let snapshot = optimisticPaidTables[table];
+        let htmlContent = `<div class="opacity-40 space-y-2">`;
+        snapshot.items.forEach(itemText => {
+          htmlContent += `
+            <div class="flex justify-between items-center bg-stone-950 p-2.5 rounded-lg">
+              <p class="text-stone-400 line-through">${itemText} (本次已結清)</p>
+              <span class="font-mono text-stone-500">NT$ --</span>
+            </div>`;
+        });
+        htmlContent += `</div>`;
+        
+        billItemsContainer.innerHTML = htmlContent;
+        document.getElementById('table-bill-total').textContent = `NT$ ${snapshot.total.toLocaleString()}`;
+        document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold";
+        document.getElementById('billing-status-badge').textContent = "🟢 本次已結清";
+
+        // 👑 絕妙改動：就地生成「下一組客人」一鍵完全重設按鈕！
+        actionZone.innerHTML = `
+          <button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-md tracking-widest active:scale-95 duration-150 shadow-lg shadow-amber-500/10">
+            🔄 下一組客人（重設空桌）
+          </button>
+        `;
+        timeLog.textContent = `⏱ 結帳時間紀錄：剛剛完成`;
+        return;
+      }
+
+      // 🔄 情況 B：乾淨空桌狀態
       if (activeTableRows.length === 0) {
         billItemsContainer.innerHTML = `<p class="text-stone-600 italic text-center py-12">該桌目前是乾淨空桌，無任何未結帳單。🧹</p>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
@@ -222,6 +260,7 @@
         return;
       }
 
+      // 🔄 情況 C：有已出單、待收錢的品項
       if (unpaidAndCookedRows.length > 0) {
         let totalSum = 0;
         let htmlContent = `<div class="space-y-2">`;
@@ -251,11 +290,12 @@
 
         const rowIndices = unpaidAndCookedRows.map(o => o.row).join(',');
         actionZone.innerHTML = `
-          <button onclick="batchPay('${rowIndices}', '${table}')" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-md tracking-wider shadow-lg shadow-amber-500/10">💰 現金收款結帳</button>
+          <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum})" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-md tracking-wider shadow-lg shadow-amber-500/10">💰 現金收款結帳</button>
         `;
         timeLog.textContent = "";
 
       } else if (makingCount > 0) {
+        // 有單但在吧台做，還沒被打勾推出
         billItemsContainer.innerHTML = `
           <div class="py-8 text-center space-y-2">
             <p class="text-amber-500 font-bold text-sm">⏳ 餐點製作中，尚未出單</p>
@@ -269,10 +309,24 @@
       }
     }
 
-    function batchPay(rowStr, table) {
+    // 💰 收款結帳：建立記憶體就地封鎖快照，秒變「下一組客人」預備狀態
+    function batchPay(rowStr, table, totalAmount) {
       const rows = rowStr.split(',');
+      const itemsSnapshot = [];
       
-      allOrders.forEach(o => { if (o && rows.includes(String(o.row))) o.status = "已結帳"; });
+      allOrders.forEach(o => {
+        if (o && rows.includes(String(o.row))) {
+          itemsSnapshot.push(o.item);
+          o.status = "已結帳"; // 前端大腦直接洗白
+        }
+      });
+
+      // 鎖定過渡快照
+      optimisticPaidTables[table] = {
+        total: totalAmount,
+        items: itemsSnapshot
+      };
+
       renderTableBill(table);
       updateTableStatusBadges();
 
@@ -284,22 +338,32 @@
           body: JSON.stringify({ action: "updateStatus", row: parseInt(row), type: "payment", value: "已結帳" })
         })
       );
-
       Promise.all(tasks).then(() => { refreshData(); });
     }
 
+    // 👑 靈魂大絕招：一鍵完全清除上一輪快照，瞬間還原 0 元全新空桌！
+    function resetTableToEmpty(table) {
+      delete optimisticPaidTables[table]; // 拔除過渡記憶體
+      
+      // 前端大腦徹底將該桌所有舊資料過濾洗乾淨
+      allOrders = allOrders.filter(o => o && !(o.table === table && o.status === "已結帳"));
+      
+      renderTableBill(table);
+      updateTableStatusBadges();
+    }
+
     // 招待紀錄發送核心
-    async function submit公關Shot(staffId) {
+    async function submit公關Shot(staffId, evt) {
       if (!activeTable) {
         alert("🚨 請先在上方點選桌號，才能記錄招待紀錄喔！");
         return;
       }
       
-      const btn = event.currentTarget;
+      const btn = evt.currentTarget || evt.target;
       const originalText = btn.innerText;
       
       btn.innerText = "✓ 已記錄";
-      btn.className = "py-2.5 text-xs font-bold rounded-xl bg-green-600 text-white transition";
+      btn.className = "py-2.5 text-xs font-black rounded-xl bg-green-600 text-white transition";
       setTimeout(() => {
         btn.innerText = originalText;
         btn.className = "py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95";
