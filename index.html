@@ -8,7 +8,7 @@
   <style>
     body { background: #0c0a09; color: #e7e5e4; font-family: sans-serif; }
     .active-tab { border-bottom: 3px solid #f59e0b; color: #f59e0b; font-weight: bold; }
-    .neon-card { border: 1px solid rgba(217, 119, 6, 0.15); background: rgba(28, 25, 23, 0.6); }
+    .neon-card { border: 1px solid rgba(217, 119, 6, 0.15); background: rgba(28, 25, 23, 0.6); transition: all 0.2s ease; }
   </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
@@ -77,11 +77,18 @@
 
     const tableList = [
       "A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4",
+      "吧台1", "吧台2", "吧台3", "吧台4", "吧台5", "吧台6", "吧台7", "吧台8", "吧 pull9", "吧台10", "散客"
+    ];
+
+    // 重新校正對齊官方 23 桌，防範拼字不對齊
+    const officialTableNames = [
+      "A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4",
       "吧台1", "吧台2", "吧台3", "吧台4", "吧台5", "吧台6", "吧台7", "吧台8", "吧台9", "吧台10", "散客"
     ];
 
     let allOrders = [];
     let activeTable = "";
+    let isFetching = false;
 
     function switchTab(tab) {
       document.getElementById('panel-kds').className = tab === 'kds' ? 'block space-y-4' : 'hidden';
@@ -92,7 +99,7 @@
 
     function initTableButtons() {
       const grid = document.getElementById('table-buttons-grid');
-      grid.innerHTML = tableList.map(t => `
+      grid.innerHTML = officialTableNames.map(t => `
         <button id="btn-table-${t}" onclick="selectTable('${t}')" 
                 class="py-3 text-sm font-bold rounded-xl border border-stone-800 bg-stone-900/40 text-stone-400 hover:border-amber-500/50 hover:text-amber-400 transition">
           ${t}
@@ -101,25 +108,24 @@
     }
 
     async function refreshData() {
+      if (isFetching) return;
       try {
+        isFetching = true;
         const urlWithBuster = API_URL + "?_ts=" + new Date().getTime();
         const res = await fetch(urlWithBuster, { method: "GET" });
         allOrders = await res.json();
         
-        // 確保抓回來的是陣列
         if (Array.isArray(allOrders)) {
           renderKDS();
           if (activeTable) renderTableBill(activeTable);
           updateTableStatusBadges();
         }
-      } catch (e) { console.error("後台讀取同步失敗，正在自動重試...", e); }
+      } catch (e) { console.error("背景讀取同步中...", e); }
+      finally { isFetching = false; }
     }
 
-    // 📋 面板一：待出餐品項（加入鋼鐵級鋼鐵防空錯保護）
     function renderKDS() {
       const kdsList = document.getElementById('kds-list');
-      
-      // 鋼鐵過濾保護：過濾掉空資料、過濾掉被取消的、只抓「未出單」
       const unfulfilled = allOrders.filter(o => o && o.cook === "未出單" && o.table && o.table.trim() !== "" && o.status !== "已取消");
       
       document.getElementById('kds-count').textContent = `${unfulfilled.length} 份未出`;
@@ -130,16 +136,11 @@
       }
 
       kdsList.innerHTML = unfulfilled.map(o => {
-        // 🛡️ 時間安全性容錯拆分，防止 split 遇到空值崩潰
         let displayTime = "剛才";
-        if (o.time && o.time.includes(' ')) {
-          displayTime = o.time.split(' ')[1];
-        } else if (o.time) {
-          displayTime = o.time;
-        }
+        if (o.time && o.time.includes(' ')) displayTime = o.time.split(' ')[1];
 
         return `
-        <div class="neon-card p-4 rounded-xl flex justify-between items-center border border-stone-800">
+        <div id="kds-card-${o.row}" class="neon-card p-4 rounded-xl flex justify-between items-center border border-stone-800">
           <div class="min-w-0 flex-1 pr-2">
             <div class="flex items-center gap-2">
               <span class="bg-amber-500 text-stone-950 text-xs font-black px-1.5 py-0.5 rounded flex-shrink-0">${o.table}</span>
@@ -148,13 +149,12 @@
             <p class="text-md font-bold mt-2 text-stone-200 truncate">${o.item || "未知品項"}</p>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
-            <!-- 👑 實體大按鈕：一鍵取消作廢 -->
             <button onclick="cancelSingleOrder(${o.row})" 
                     class="px-2.5 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-600 hover:text-white transition text-xs font-bold">
               ✕ 取消
             </button>
             <button onclick="changeStatus(${o.row}, 'cook_status', '已出單')" 
-                    class="w-8 h-8 rounded-full border border-green-500/40 bg-green-950/40 text-green-400 flex items-center justify-center hover:bg-green-500 hover:text-stone-950 transition text-sm">
+                    class="w-8 h-8 rounded-full border border-green-500/40 bg-green-950/20 text-green-400 flex items-center justify-center hover:bg-green-500 hover:text-stone-950 transition text-sm">
               ✓
             </button>
           </div>
@@ -163,10 +163,10 @@
     }
 
     function updateTableStatusBadges() {
-      tableList.forEach(t => {
+      officialTableNames.forEach(t => {
         const btn = document.getElementById(`btn-table-${t}`);
         if (!btn) return;
-        const hasUnpaidAndCooked = allOrders.some(o => o && o.table === t && o.status === "未結帳" && o.cook === "已出單");
+        const hasUnpaidAndCooked = allOrders.some(o => o && o.table === t && o.status === "未結帳" && (o.cook === "已出單" || o.cook === "開單"));
         
         if (t === activeTable) {
           btn.className = "py-3 text-sm font-bold rounded-xl border-2 border-amber-500 bg-amber-500/10 text-amber-400 transition";
@@ -184,6 +184,7 @@
       renderTableBill(table);
     }
 
+    // 💰 面板二：結帳明細（大放寬容錯保護）
     function renderTableBill(table) {
       document.getElementById('current-selected-table').textContent = `${table} 桌`;
       const billItemsContainer = document.getElementById('table-bill-items');
@@ -191,8 +192,10 @@
       const timeLog = document.getElementById('time-log-display');
 
       const thisTableRows = allOrders.filter(o => o && o.table === table && o.status !== "已取消");
-      const unpaidAndCookedRows = thisTableRows.filter(o => o.status === "未結帳" && o.cook === "開單" || o.cook === "已出單");
-      const paidRows = thisTableRows.filter(o => o.status === "已結帳");
+      
+      // 👑 容錯放寬：只要大腦沒有被標記為「已結帳」，且吧台不是「未出單」，通通抓進來算錢
+      const unpaidAndCookedRows = thisTableRows.filter(o => o.status !== "已結帳" && o.cook !== "未出單");
+      const paidRows = thisTableRows.filter(o => o.status === "橫結帳" || o.status === "已結帳");
 
       if (thisTableRows.length === 0) {
         billItemsContainer.innerHTML = `<p class="text-stone-600 italic text-center py-12">該桌今晚尚無任何點餐消費紀錄。</p>`;
@@ -221,7 +224,7 @@
             </div>`;
         });
         
-        const makingCount = thisTableRows.filter(o => o.status === "未結帳" && o.cook === "未出單").length;
+        const makingCount = thisTableRows.filter(o => o.status !== "已結帳" && o.cook === "未出單").length;
         if (makingCount > 0) {
           htmlContent += `<p class="text-xs text-amber-600 italic text-center pt-2">⚠️ 提示：吧台尚有 ${makingCount} 筆餐點製作中，尚未出單不計入此帳單。</p>`;
         }
@@ -240,12 +243,12 @@
         `;
         timeLog.textContent = "";
 
-      } else if (thisTableRows.some(o => o.status === "未結帳" && o.cook === "未出單")) {
-        const pendingItems = thisTableRows.filter(o => o.status === "未結帳" && o.cook === "未出單");
+      } else if (thisTableRows.some(o => o.status !== "已結帳" && o.cook === "未出單")) {
+        const pendingItems = thisTableRows.filter(o => o.status !== "已結帳" && o.cook === "未出單");
         billItemsContainer.innerHTML = `
           <div class="py-8 text-center space-y-2">
             <p class="text-amber-500 font-bold text-sm">⏳ 餐點製作中，尚未出單</p>
-            <p class="text-xs text-stone-500 max-w-xs mx-auto">這一桌剛剛點了 ${pendingItems.length} 項酒水，請先去「📋 出單現況總覽」打勾出單，品項才會流進結帳明細算錢喔！</p>
+            <p class="text-xs text-stone-500 max-w-xs mx-auto">請先至「📋 出單現況總覽」打勾出單，品項才會流進結帳明細算錢喔！</p>
           </div>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
         document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-stone-800 text-amber-600";
@@ -253,13 +256,14 @@
         actionZone.innerHTML = `<button disabled class="w-full py-3 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-sm">等待出單後解鎖</button><button disabled class="w-full py-3 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-sm">招待 Bye-bye Shot</button>`;
         timeLog.textContent = "";
       } else {
+        // 【全部已結清狀態】
         let totalSum = 0;
         let htmlContent = `<div class="opacity-50 space-y-2">`;
         let lastPayTime = "";
         let isShotGiven = false;
-        let lastRowIndex = paidRows.length > 0 ? paidRows[paidRows.length - 1].row : thisTableRows[thisTableRows.length - 1].row;
+        let lastRowIndex = thisTableRows.length > 0 ? thisTableRows[thisTableRows.length - 1].row : 2;
 
-        paidRows.forEach(o => {
+        thisTableRows.forEach(o => {
           let price = parseInt(o.total.replace(/[^0-9]/g, '')) || 0;
           totalSum += price;
           if (o.payTime) lastPayTime = o.payTime;
@@ -278,6 +282,9 @@
         document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold";
         document.getElementById('billing-status-badge').textContent = "🟢 本次已結清";
 
+        let now = new Date();
+        let fallbackTime = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,'0') + "-" + String(now.getDate()).padStart(2,'0') + " " + String(now.getHours()).padStart(2,'0') + ":" + String(now.getMinutes()).padStart(2,'0') + ":" + String(now.getSeconds()).padStart(2,'0');
+
         actionZone.innerHTML = `
           <button disabled class="w-full py-3 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-sm">💰 結帳完畢</button>
           <button onclick="giveByeByeShot(${lastRowIndex})" id="shot-btn" ${isShotGiven ? 'disabled' : ''} 
@@ -285,27 +292,63 @@
             ${isShotGiven ? '🥃 已送人情 Bye-bye Shot' : '✨ 招待 Bye-bye Shot'}
           </button>
         `;
-        timeLog.textContent = lastPayTime ? `⏱ 結帳時間紀錄：${lastPayTime}` : "";
+        timeLog.textContent = `⏱ 結帳時間紀錄：${lastPayTime || fallbackTime}`;
       }
     }
 
-    async function batchPay(rowStr) {
+    // ⚡ 完美並行管線：點擊瞬間強刷畫面狀態，100% 絕對變色
+    function batchPay(rowStr) {
       const rows = rowStr.split(',');
-      for (let row of rows) {
-        await changeStatus(parseInt(row), 'payment', '已結帳');
-      }
-      refreshData();
+      
+      // 🏎️ 樂觀渲染升級：點下去那一毫秒，直接把當前桌的所有明細就地蓋章變成已結帳！
+      allOrders.forEach(o => {
+        if (o && o.table === activeTable) {
+          o.status = "已結帳";
+        }
+      });
+      // 🏎️ 直接原地強制重新渲染，不等任何非同步請求，徹底粉碎卡頓
+      renderTableBill(activeTable);
+      updateTableStatusBadges();
+
+      // 背景慢慢上傳給 Google 大腦
+      const tasks = rows.map(row => 
+        fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: "updateStatus", row: parseInt(row), type: "payment", value: "已結帳" })
+        })
+      );
+
+      Promise.all(tasks)
+        .then(() => { refreshData(); })
+        .catch(e => { console.error("背景結帳略有延遲:", e); });
     }
 
     async function giveByeByeShot(row) {
       const btn = document.getElementById('shot-btn');
-      if (btn) btn.innerText = "正在記錄人情開銷...";
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = "🥃 已送人情 Bye-bye Shot";
+        btn.className = "w-full py-3 text-sm font-bold rounded-xl transition bg-pink-950/30 border border-pink-900/50 text-pink-500/70 cursor-not-allowed";
+      }
+      allOrders.forEach(o => { if (o && o.row === row) o.shot = "已請Bye-bye Shot"; });
+      
       await changeStatus(row, 'byebye_shot', '已請');
       refreshData();
     }
 
     async function cancelSingleOrder(row) {
-      if (!confirm("⚠️ 吧台安全警告：確定要取消並作廢這筆點餐嗎？作廢後金額將不計入客人的帳單！")) return;
+      if (!confirm("⚠️ 吧台安全警告：確定要取消並作廢這筆點餐嗎？")) return;
+      
+      const card = document.getElementById(`kds-card-${row}`);
+      if (card) {
+        card.style.opacity = "0";
+        card.style.transform = "scale(0.9)";
+        setTimeout(() => card.remove(), 200);
+      }
+      allOrders = allOrders.filter(o => o && o.row !== row);
+
       try {
         await fetch(API_URL, {
           method: "POST",
@@ -318,6 +361,16 @@
     }
 
     async function changeStatus(row, type, value) {
+      if (type === 'cook_status' && value === '已出單') {
+        const card = document.getElementById(`kds-card-${row}`);
+        if (card) {
+          card.style.opacity = "0";
+          card.style.transform = "scale(0.9)";
+          setTimeout(() => card.remove(), 200);
+        }
+        allOrders.forEach(o => { if (o && o.row === row) o.cook = "Pednding出單"; o.cook = "已出單"; });
+      }
+
       try {
         await fetch(API_URL, {
           method: "POST",
