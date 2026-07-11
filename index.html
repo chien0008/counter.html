@@ -84,8 +84,8 @@
   </section>
 
   <script>
-    // ⚠️ 請精準替換成你剛剛在 Google Apps Script 複製的全新 Web App 網址！
-    const API_URL = "你的Google_Apps_Script_網頁應用程式網址";
+    // ⚠️ 這裡要精準放上你 Google Apps Script 部署得到的「Web 應用程式網址」！
+    const API_URL = "https://script.google.com/macros/s/AKfycbyf2aQgkaeLuzpONrc3RzegFMRqXtfgucDMhXs_sXxBH4J2YnqUXr4GgnIB7LV2JO_N8A/exec";
 
     // 官方指定 23 個精準桌號名稱
     const tableList = [
@@ -119,10 +119,11 @@
       `).join('');
     }
 
-    // 核心資料定時拉取（每3秒後台與資料庫同步）
+    // 核心資料定時拉取（加入抗快取時間戳，強行破除快取，秒秒對齊！）
     async function refreshData() {
       try {
-        const res = await fetch(API_URL);
+        const cacheBuster = API_URL + "?_ts=" + new Date().getTime();
+        const res = await fetch(cacheBuster);
         allOrders = await res.json();
         renderKDS();
         if (activeTable) renderTableBill(activeTable);
@@ -194,7 +195,7 @@
       const unpaidRows = thisTableRows.filter(o => o.status === "未結帳");
 
       if (thisTableRows.length === 0) {
-        billItemsContainer.innerHTML = `<p class="text-stone-600 italic text-center py-12">該桌今晚尚無任何點餐消費紀錄。</p>`;
+        billItemsContainer.innerHTML = `<p class="text-stone-600 italic text-center py-12">該桌今晚尚無 any 點餐消費紀錄。</p>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
         document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-stone-800 text-stone-500";
         document.getElementById('billing-status-badge').textContent = "無開單";
@@ -249,7 +250,7 @@
           let price = parseInt(o.total.replace(/[^0-9]/g, '')) || 0;
           totalSum += price;
           if (o.payTime) lastPayTime = o.payTime;
-          if (o.shot.includes("Bye-bye")) isShotGiven = true;
+          if (o.shot && o.shot.includes("Bye-bye")) isShotGiven = true;
           
           htmlContent += `
             <div class="flex justify-between items-center bg-stone-950 p-2.5 rounded-lg">
@@ -288,16 +289,19 @@
 
     // 處理 Bye-bye Shot 紀錄
     async function giveByeByeShot(row) {
-      document.getElementById('shot-btn').innerText = "正在記錄人情開銷...";
+      const btn = document.getElementById('shot-btn');
+      if (btn) btn.innerText = "正在記錄人情開銷...";
       await changeStatus(row, 'byebye_shot', '已請');
       refreshData();
     }
 
-    // 底層通用：修改 API
+    // 👑 底層通用：完美對接 mode: no-cors 跨網域防鎖協議！
     async function changeStatus(row, type, value) {
       try {
         await fetch(API_URL, {
           method: "POST",
+          mode: "no-cors", 
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: "updateStatus", row: row, type: type, value: value })
         });
       } catch (e) { console.error("更新失敗:", e); }
