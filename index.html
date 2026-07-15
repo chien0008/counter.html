@@ -18,7 +18,7 @@
       <span class="text-2xl">🍹</span>
       <div>
         <h1 class="text-xl font-black text-amber-500 tracking-widest">See Ya Bar</h1>
-        <p class="text-xs text-stone-500">智慧控盤中樞</p>
+        <p class="text-xs text-stone-500">智慧控盤中樞 6.2</p>
       </div>
     </div>
     <nav class="flex gap-6 text-sm">
@@ -48,7 +48,7 @@
         <div id="table-buttons-grid" class="grid grid-cols-3 gap-2"></div>
       </div>
 
-      <!-- 👑 吧台店員招待紀錄區 -->
+      <!-- 🥃 吧台店員招待紀錄區 -->
       <div class="bg-stone-900/60 border border-pink-500/20 rounded-2xl p-4 space-y-3 shadow-inner">
         <div>
           <h2 class="text-xs font-black text-pink-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -61,6 +61,7 @@
           <span id="shot-target-display" class="font-black text-pink-500 block mt-1 text-sm">請先選桌</span>
         </div>
         <div class="grid grid-cols-3 gap-2">
+          <!-- 👑 完美對齊：傳入 event 確保點擊時按鈕動畫 100% 精準變色，不搞混 id -->
           <button onclick="submit公關Shot('1', event)" id="shot-staff-1" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 1</button>
           <button onclick="submit公關Shot('2', event)" id="shot-staff-2" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 2</button>
           <button onclick="submit公關Shot('3', event)" id="shot-staff-3" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 3</button>
@@ -96,6 +97,7 @@
   </section>
 
   <script>
+    // 👑 步驟一中最新生成的 Web 應用程式 API 網址請放置在下方：
     const API_URL = "https://script.google.com/macros/s/AKfycbyf2aQgkaeLuzpONrc3RzegFMRqXtfgucDMhXs_sXxBH4J2YnqUXr4GgnIB7LV2JO_N8A/exec";
 
     const officialTableNames = [
@@ -106,8 +108,6 @@
     let allOrders = [];
     let activeTable = "";
     let isFetching = false;
-
-    // 儲存前端樂觀清盤的快照狀態
     let optimisticPaidTables = {};
 
     function switchTab(tab) {
@@ -187,7 +187,6 @@
         const btn = document.getElementById(`btn-table-${t}`);
         if (!btn) return;
         
-        // 排除掉已經前端「樂觀收款」的桌子，讓它亮燈立刻熄滅
         const isOptimisticPaid = optimisticPaidTables[t];
         const hasUnpaidAndCooked = allOrders.some(o => o && o.table === t && o.status === "未結帳" && o.cook === "已出單");
         
@@ -214,14 +213,12 @@
       const actionZone = document.getElementById('action-buttons-zone');
       const timeLog = document.getElementById('time-log-display');
 
-      // 🔍 核心防累計：排除在記憶體裡已經按過結帳的，以及只算未結帳的有效單
       const isOptimisticPaid = optimisticPaidTables[table];
       const activeTableRows = isOptimisticPaid ? [] : allOrders.filter(o => o && o.table === table && o.status === "未結帳");
       
       const unpaidAndCookedRows = activeTableRows.filter(o => o.cook === "已出單");
       const makingCount = activeTableRows.filter(o => o.cook === "未出單").length;
 
-      // 🔄 情況 A：吧台剛剛點了現金結帳，完美咬住「下一組客人」的清盤跑道
       if (isOptimisticPaid) {
         let snapshot = optimisticPaidTables[table];
         let htmlContent = `<div class="opacity-40 space-y-2">`;
@@ -239,7 +236,6 @@
         document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold";
         document.getElementById('billing-status-badge').textContent = "🟢 本次已結清";
 
-        // 👑 絕妙改動：就地生成「下一組客人」一鍵完全重設按鈕！
         actionZone.innerHTML = `
           <button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-md tracking-widest active:scale-95 duration-150 shadow-lg shadow-amber-500/10">
             🔄 下一組客人（重設空桌）
@@ -249,7 +245,6 @@
         return;
       }
 
-      // 🔄 情況 B：乾淨空桌狀態
       if (activeTableRows.length === 0) {
         billItemsContainer.innerHTML = `<p class="text-stone-600 italic text-center py-12">該桌目前是乾淨空桌，無任何未結帳單。🧹</p>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
@@ -260,7 +255,6 @@
         return;
       }
 
-      // 🔄 情況 C：有已出單、待收錢的品項
       if (unpaidAndCookedRows.length > 0) {
         let totalSum = 0;
         let htmlContent = `<div class="space-y-2">`;
@@ -295,7 +289,6 @@
         timeLog.textContent = "";
 
       } else if (makingCount > 0) {
-        // 有單但在吧台做，還沒被打勾推出
         billItemsContainer.innerHTML = `
           <div class="py-8 text-center space-y-2">
             <p class="text-amber-500 font-bold text-sm">⏳ 餐點製作中，尚未出單</p>
@@ -309,19 +302,19 @@
       }
     }
 
-    // 💰 收款結帳：建立記憶體就地封鎖快照，秒變「下一組客人」預備狀態
-    function batchPay(rowStr, table, totalAmount) {
-      const rows = rowStr.split(',');
+    // 👑 鐵血管線更新：完全拿掉 no-cors，改發送單一筆 POST 陣列，如果後端失敗跳出錯誤，並「原封不動回滾（Rollback）帳目」！
+    async function batchPay(rowStr, table, totalAmount) {
+      const rows = rowStr.split(',').map(r => parseInt(r));
       const itemsSnapshot = [];
       
+      // 樂觀渲染先行
       allOrders.forEach(o => {
-        if (o && rows.includes(String(o.row))) {
+        if (o && rows.includes(o.row)) {
           itemsSnapshot.push(o.item);
-          o.status = "已結帳"; // 前端大腦直接洗白
+          o.status = "已結帳"; 
         }
       });
 
-      // 鎖定過渡快照
       optimisticPaidTables[table] = {
         total: totalAmount,
         items: itemsSnapshot
@@ -330,29 +323,34 @@
       renderTableBill(table);
       updateTableStatusBadges();
 
-      const tasks = rows.map(row => 
-        fetch(API_URL, {
+      try {
+        // 🚀 只發送 1 次 POST 指令包裝整包陣列，對齊 text/plain 安全通道
+        const response = await fetch(API_URL, {
           method: "POST",
-          mode: "no-cors",
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: "updateStatus", row: parseInt(row), type: "payment", value: "已結帳" })
-        })
-      );
-      Promise.all(tasks).then(() => { refreshData(); });
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: "batchUpdateStatus", rows: rows, type: "payment" })
+        });
+        
+        const result = await response.json();
+        if(!result.success) throw new Error(result.error || "大腦拒絕寫入");
+        refreshData();
+      } catch (error) {
+        // 🛡️ 帳目安全機制：連線有任何閃失，1秒鐘吐回資料，絕不造成呆帳
+        alert("🚨 櫃檯對帳衝突防禦：結帳連線超時或失敗（原因：" + error.message + "）。剛剛結帳的明細已全數安全復原，請重新點擊！");
+        delete optimisticPaidTables[table];
+        allOrders.forEach(o => { if (o && rows.includes(o.row)) o.status = "未結帳"; });
+        renderTableBill(table);
+        updateTableStatusBadges();
+      }
     }
 
-    // 👑 靈魂大絕招：一鍵完全清除上一輪快照，瞬間還原 0 元全新空桌！
     function resetTableToEmpty(table) {
-      delete optimisticPaidTables[table]; // 拔除過渡記憶體
-      
-      // 前端大腦徹底將該桌所有舊資料過濾洗乾淨
+      delete optimisticPaidTables[table]; 
       allOrders = allOrders.filter(o => o && !(o.table === table && o.status === "已結帳"));
-      
       renderTableBill(table);
       updateTableStatusBadges();
     }
 
-    // 招待紀錄發送核心
     async function submit公關Shot(staffId, evt) {
       if (!activeTable) {
         alert("🚨 請先在上方點選桌號，才能記錄招待紀錄喔！");
@@ -372,8 +370,7 @@
       try {
         await fetch(API_URL, {
           method: "POST",
-          mode: "no-cors",
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({ action: "record公關Shot", tableNum: activeTable, staffId: staffId })
         });
         refreshData();
@@ -388,16 +385,24 @@
         card.style.transform = "scale(0.9)";
         setTimeout(() => card.remove(), 200);
       }
+      
+      const bakOrders = [...allOrders];
       allOrders = allOrders.filter(o => o && o.row !== row);
+
       try {
-        await fetch(API_URL, {
+        const response = await fetch(API_URL, {
           method: "POST",
-          mode: "no-cors",
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: "updateStatus", row: row, type: "cancel_order", value: "已取消" })
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: "updateStatus", row: row, type: "cancel_order" })
         });
+        const result = await response.json();
+        if (!result.success) throw new Error();
         refreshData();
-      } catch (e) { console.error("取消失敗:", e); }
+      } catch (e) {
+        alert("🚨 取消失敗：後端拒絕或網路異常，品項已重新復原！");
+        allOrders = bakOrders;
+        renderKDS();
+      }
     }
 
     async function changeStatus(row, type, value) {
@@ -413,8 +418,7 @@
       try {
         await fetch(API_URL, {
           method: "POST",
-          mode: "no-cors", 
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({ action: "updateStatus", row: row, type: type, value: value })
         });
         refreshData();
