@@ -234,14 +234,17 @@
         billItemsContainer.innerHTML = htmlContent;
         document.getElementById('table-bill-total').textContent = `NT$ ${snapshot.total.toLocaleString()}`;
         document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold";
-        document.getElementById('billing-status-badge').textContent = "本次已結清";
+        
+        let badgeText = "已結清(" + snapshot.payMethod + ")";
+        if (snapshot.bankLast5) badgeText += "[" + snapshot.bankLast5 + "]";
+        document.getElementById('billing-status-badge').textContent = badgeText;
 
         actionZone.innerHTML = `
           <button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-md tracking-widest active:scale-95 duration-150 shadow-lg shadow-amber-500/10">
             🔄 下一組客人（重設空桌）
           </button>
         `;
-        timeLog.textContent = `⏱ 結帳時間紀錄：剛剛完成`;
+        timeLog.textContent = `⏱ 結帳時間紀錄：${snapshot.payTime || '剛剛完成'}`;
         return;
       }
 
@@ -250,7 +253,7 @@
         document.getElementById('table-bill-total').textContent = "NT$ 0";
         document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-stone-800 text-stone-500";
         document.getElementById('billing-status-badge').textContent = "無開單";
-        actionZone.innerHTML = `<button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">現金收款結帳</button>`;
+        actionZone.innerHTML = `<button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">收款結帳</button>`;
         timeLog.textContent = "";
         return;
       }
@@ -284,7 +287,10 @@
 
         const rowIndices = unpaidAndCookedRows.map(o => o.row).join(',');
         actionZone.innerHTML = `
-          <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum})" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-md tracking-wider shadow-lg shadow-amber-500/10">💰 現金收款結帳</button>
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '現金')" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-sm shadow-lg shadow-amber-500/10">💵 現金結帳</button>
+            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '銀行轉帳')" class="w-full py-3.5 bg-sky-600 hover:bg-sky-500 text-white font-black rounded-xl transition text-sm shadow-lg shadow-sky-600/10">🏦 銀行轉帳</button>
+          </div>
         `;
         timeLog.textContent = "";
 
@@ -303,7 +309,20 @@
     }
 
     // 👑 鐵血管線更新：完全拿掉 no-cors，改發送單一筆 POST 陣列，如果後端失敗跳出錯誤，並「原封不動回滾（Rollback）帳目」！
-    async function batchPay(rowStr, table, totalAmount) {
+    async function batchPay(rowStr, table, totalAmount, payMethod) {
+      let bankLast5 = "";
+      
+      // 如果選擇銀行轉帳，提示輸入末五碼
+      if (payMethod === "銀行轉帳") {
+        const input = prompt("🏦 請輸入顧客轉帳的「帳號末 5 碼」以利核對（例如 88888）：");
+        if (input === null) return; // 按取消則放棄結帳
+        bankLast5 = input.trim();
+        if (!bankLast5) {
+          alert("⚠️ 提醒：未輸入末五碼，將預設為 [未提供末五碼] 存檔！");
+          bankLast5 = "未提供";
+        }
+      }
+
       const rows = rowStr.split(',').map(r => parseInt(r));
       const itemsSnapshot = [];
       
@@ -315,9 +334,21 @@
         }
       });
 
+      // 精準格式化年月日時分秒
+      const now = new Date();
+      const nowFormatted = now.getFullYear() + "-" + 
+                           String(now.getMonth()+1).padStart(2,'0') + "-" + 
+                           String(now.getDate()).padStart(2,'0') + " " + 
+                           String(now.getHours()).padStart(2,'0') + ":" + 
+                           String(now.getMinutes()).padStart(2,'0') + ":" + 
+                           String(now.getSeconds()).padStart(2,'0');
+
       optimisticPaidTables[table] = {
         total: totalAmount,
-        items: itemsSnapshot
+        items: itemsSnapshot,
+        payMethod: payMethod,
+        bankLast5: bankLast5,
+        payTime: nowFormatted
       };
 
       renderTableBill(table);
@@ -328,7 +359,13 @@
         const response = await fetch(API_URL, {
           method: "POST",
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: "batchUpdateStatus", rows: rows, type: "payment" })
+          body: JSON.stringify({ 
+            action: "batchUpdateStatus", 
+            rows: rows, 
+            type: "payment",
+            payMethod: payMethod,
+            bankLast5: bankLast5
+          })
         });
         
         const result = await response.json();
