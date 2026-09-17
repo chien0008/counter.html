@@ -22,19 +22,19 @@
       </div>
     </div>
     <nav class="flex gap-6 text-sm">
-      <button id="tab-kds" class="py-2 px-1 active-tab transition" onclick="switchTab('kds')">📋 出單現況總覽</button>
-      <button id="tab-pos" class="py-2 px-1 text-stone-400 hover:text-amber-400 transition" onclick="switchTab('pos')">💰 桌況後結帳系統</button>
+      <button id="tab-kds" class="py-2 px-1 active-tab transition" onclick="switchTab('kds')">出單現況總覽</button>
+      <button id="tab-pos" class="py-2 px-1 text-stone-400 hover:text-amber-400 transition" onclick="switchTab('pos')">桌況後結帳系統</button>
     </nav>
   </header>
 
   <!-- ==================== 面板一：出單現況總覽 ==================== -->
   <section id="panel-kds" class="block space-y-4">
     <div class="flex justify-between items-center">
-      <h2 class="text-md font-bold text-stone-400 flex items-center gap-2">⏳ 吧台待出餐品項 (勾選即完成)</h2>
+      <h2 class="text-md font-bold text-stone-400 flex items-center gap-2">吧台待出餐品項 (勾選即完成)</h2>
       <span id="kds-count" class="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">0 份未出</span>
     </div>
     <div id="kds-list" class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-      <div class="text-stone-500 italic text-sm">正在從 Google 大腦載入最新鮮的吧台數據...</div>
+      <div class="text-stone-500 italic text-sm">正在從 Google 載入吧台數據...</div>
     </div>
   </section>
 
@@ -44,20 +44,20 @@
     <!-- 左側：桌號選擇按鈕牆 ＆ 獨立店員招待紀錄區 -->
     <div class="lg:col-span-1 space-y-5">
       <div class="space-y-3">
-        <h2 class="text-md font-bold text-stone-400">📍 請選擇控制桌號</h2>
+        <h2 class="text-md font-bold text-stone-400">請選擇控制桌號</h2>
         <div id="table-buttons-grid" class="grid grid-cols-3 gap-2"></div>
       </div>
 
-      <!-- 🥃 吧台店員招待紀錄區 -->
+      <!-- 吧台店員結帳紀錄區 -->
       <div class="bg-stone-900/60 border border-pink-500/20 rounded-2xl p-4 space-y-3 shadow-inner">
         <div>
           <h2 class="text-xs font-black text-pink-400 uppercase tracking-widest flex items-center gap-1.5">
-            <span>🥃 吧台招待紀錄區</span>
+            <span>吧台店員結帳紀錄區</span>
           </h2>
-          <p class="text-[11px] text-stone-400 mt-0.5">點選上方桌號位置，再戳下方店員按鈕即可一鍵送酒留底</p>
+          <p class="text-[11px] text-stone-400 mt-0.5">點選上方桌號位置，再點下方店員按鈕紀錄</p>
         </div>
         <div class="bg-black/40 p-2.5 text-center text-xs rounded-xl border border-stone-800">
-          <span class="text-stone-500">當前鎖定招待位置：</span>
+          <span class="text-stone-500">當前鎖定結帳位置：</span>
           <span id="shot-target-display" class="font-black text-pink-500 block mt-1 text-sm">請先選桌</span>
         </div>
         <div class="grid grid-cols-3 gap-2">
@@ -74,7 +74,7 @@
       <div>
         <div class="flex justify-between items-center border-b border-stone-800 pb-3 mb-4">
           <h3 class="text-lg font-bold flex items-center gap-2 text-amber-400">
-            <span>🧾 帳單明細 -</span> <span id="current-selected-table">未選擇桌號</span>
+            <span>帳單明細 -</span> <span id="current-selected-table">未選擇桌號</span>
           </h3>
           <span id="billing-status-badge" class="text-xs px-2 py-0.5 rounded-full bg-stone-800 text-stone-500">請先選桌</span>
         </div>
@@ -89,7 +89,7 @@
           <span id="table-bill-total" class="text-2xl font-black text-amber-500">NT$ 0</span>
         </div>
         <div id="action-buttons-zone">
-          <button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">現金收款結帳</button>
+          <button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">收款結帳</button>
         </div>
         <p id="time-log-display" class="text-center text-xs text-stone-500 italic"></p>
       </div>
@@ -151,7 +151,7 @@
       document.getElementById('kds-count').textContent = `${unfulfilled.length} 份未出`;
       
       if (unfulfilled.length === 0) {
-        kdsList.innerHTML = `<div class="col-span-3 py-12 text-center text-stone-500 italic text-sm">🎉 所有酒水餐點均已出單完畢！吧台手可以休息一下～</div>`;
+        kdsList.innerHTML = `<div class="col-span-3 py-12 text-center text-stone-500 italic text-sm">所有酒水餐點均已出單完畢</div>`;
         return;
       }
 
@@ -234,7 +234,7 @@
         billItemsContainer.innerHTML = htmlContent;
         document.getElementById('table-bill-total').textContent = `NT$ ${snapshot.total.toLocaleString()}`;
         document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold";
-        document.getElementById('billing-status-badge').textContent = "🟢 本次已結清";
+        document.getElementById('billing-status-badge').textContent = "本次已結清";
 
         actionZone.innerHTML = `
           <button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-md tracking-widest active:scale-95 duration-150 shadow-lg shadow-amber-500/10">
@@ -273,7 +273,7 @@
         });
         
         if (makingCount > 0) {
-          htmlContent += `<p class="text-xs text-amber-600 italic text-center pt-2">⚠️ 提示：吧台尚有 ${makingCount} 筆餐點製作中，尚未出單不計入此帳單。</p>`;
+          htmlContent += `<p class="text-xs text-amber-600 italic text-center pt-2">提示：吧台尚有 ${makingCount} 筆餐點製作中，尚未出單不計入此帳單。</p>`;
         }
         htmlContent += `</div>`;
         
@@ -291,8 +291,8 @@
       } else if (makingCount > 0) {
         billItemsContainer.innerHTML = `
           <div class="py-8 text-center space-y-2">
-            <p class="text-amber-500 font-bold text-sm">⏳ 餐點製作中，尚未出單</p>
-            <p class="text-xs text-stone-500 max-w-xs mx-auto">請先至「📋 出單現況總覽」打勾出單，品項才會流進結帳明細算錢喔！</p>
+            <p class="text-amber-500 font-bold text-sm">餐點製作中，尚未出單</p>
+            <p class="text-xs text-stone-500 max-w-xs mx-auto">請先至「出單現況總覽」打勾出單，品項才會流進結帳明細算錢</p>
           </div>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
         document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-stone-800 text-amber-600";
@@ -336,7 +336,7 @@
         refreshData();
       } catch (error) {
         // 🛡️ 帳目安全機制：連線有任何閃失，1秒鐘吐回資料，絕不造成呆帳
-        alert("🚨 櫃檯對帳衝突防禦：結帳連線超時或失敗（原因：" + error.message + "）。剛剛結帳的明細已全數安全復原，請重新點擊！");
+        alert("🚨 櫃檯對帳衝突防禦：結帳連線超時或失敗（原因：" + error.message + "）。剛剛結帳的明細已安全復原，請重新點擊");
         delete optimisticPaidTables[table];
         allOrders.forEach(o => { if (o && rows.includes(o.row)) o.status = "未結帳"; });
         renderTableBill(table);
@@ -353,7 +353,7 @@
 
     async function submit公關Shot(staffId, evt) {
       if (!activeTable) {
-        alert("🚨 請先在上方點選桌號，才能記錄招待紀錄喔！");
+        alert("請先在上方點選桌號，才能記錄招待紀錄喔！");
         return;
       }
       
