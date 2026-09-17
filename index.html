@@ -18,7 +18,7 @@
       <span class="text-2xl">🍹</span>
       <div>
         <h1 class="text-xl font-black text-amber-500 tracking-widest">See Ya Bar</h1>
-        <p class="text-xs text-stone-500">智慧控盤中樞 6.2</p>
+        <p class="text-xs text-stone-500">智慧控盤中樞 6.3</p>
       </div>
     </div>
     <nav class="flex gap-6 text-sm">
@@ -41,31 +41,11 @@
   <!-- ==================== 面板二：桌況後結帳系統 ==================== -->
   <section id="panel-pos" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
     
-    <!-- 左側：桌號選擇按鈕牆 ＆ 獨立店員招待紀錄區 -->
+    <!-- 左側：桌號選擇按鈕牆 -->
     <div class="lg:col-span-1 space-y-5">
       <div class="space-y-3">
         <h2 class="text-md font-bold text-stone-400">請選擇控制桌號</h2>
         <div id="table-buttons-grid" class="grid grid-cols-3 gap-2"></div>
-      </div>
-
-      <!-- 吧台店員結帳紀錄區 -->
-      <div class="bg-stone-900/60 border border-pink-500/20 rounded-2xl p-4 space-y-3 shadow-inner">
-        <div>
-          <h2 class="text-xs font-black text-pink-400 uppercase tracking-widest flex items-center gap-1.5">
-            <span>吧台店員結帳紀錄區</span>
-          </h2>
-          <p class="text-[11px] text-stone-400 mt-0.5">點選上方桌號位置，再點下方店員按鈕紀錄</p>
-        </div>
-        <div class="bg-black/40 p-2.5 text-center text-xs rounded-xl border border-stone-800">
-          <span class="text-stone-500">當前鎖定結帳位置：</span>
-          <span id="shot-target-display" class="font-black text-pink-500 block mt-1 text-sm">請先選桌</span>
-        </div>
-        <div class="grid grid-cols-3 gap-2">
-          <!-- 👑 完美對齊：傳入 event 確保點擊時按鈕動畫 100% 精準變色，不搞混 id -->
-          <button onclick="submit公關Shot('1', event)" id="shot-staff-1" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 1</button>
-          <button onclick="submit公關Shot('2', event)" id="shot-staff-2" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 2</button>
-          <button onclick="submit公關Shot('3', event)" id="shot-staff-3" class="py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95 duration-150">店員 3</button>
-        </div>
       </div>
     </div>
 
@@ -97,7 +77,6 @@
   </section>
 
   <script>
-    // 👑 步驟一中最新生成的 Web 應用程式 API 網址請放置在下方：
     const API_URL = "https://script.google.com/macros/s/AKfycbyf2aQgkaeLuzpONrc3RzegFMRqXtfgucDMhXs_sXxBH4J2YnqUXr4GgnIB7LV2JO_N8A/exec";
 
     const officialTableNames = [
@@ -202,7 +181,6 @@
 
     function selectTable(table) {
       activeTable = table;
-      document.getElementById('shot-target-display').textContent = `🎯 ${table} 位置`;
       updateTableStatusBadges();
       renderTableBill(table);
     }
@@ -308,17 +286,15 @@
       }
     }
 
-    // 👑 鐵血管線更新：完全拿掉 no-cors，改發送單一筆 POST 陣列，如果後端失敗跳出錯誤，並「原封不動回滾（Rollback）帳目」！
     async function batchPay(rowStr, table, totalAmount, payMethod) {
       let bankLast5 = "";
       
-      // 如果選擇銀行轉帳，提示輸入末五碼
       if (payMethod === "銀行轉帳") {
         const input = prompt("🏦 請輸入顧客轉帳的「帳號末 5 碼」以利核對（例如 88888）：");
-        if (input === null) return; // 按取消則放棄結帳
+        if (input === null) return;
         bankLast5 = input.trim();
         if (!bankLast5) {
-          alert("⚠️ 提醒：未輸入末五碼，將預設為 [未提供末五碼] 存檔！");
+          alert("⚠️ 提醒：未輸入末五碼，將預設為 [未提供] 存檔！");
           bankLast5 = "未提供";
         }
       }
@@ -326,7 +302,6 @@
       const rows = rowStr.split(',').map(r => parseInt(r));
       const itemsSnapshot = [];
       
-      // 樂觀渲染先行
       allOrders.forEach(o => {
         if (o && rows.includes(o.row)) {
           itemsSnapshot.push(o.item);
@@ -334,7 +309,6 @@
         }
       });
 
-      // 精準格式化年月日時分秒
       const now = new Date();
       const nowFormatted = now.getFullYear() + "-" + 
                            String(now.getMonth()+1).padStart(2,'0') + "-" + 
@@ -355,7 +329,6 @@
       updateTableStatusBadges();
 
       try {
-        // 🚀 只發送 1 次 POST 指令包裝整包陣列，對齊 text/plain 安全通道
         const response = await fetch(API_URL, {
           method: "POST",
           headers: { 'Content-Type': 'text/plain' },
@@ -372,7 +345,6 @@
         if(!result.success) throw new Error(result.error || "大腦拒絕寫入");
         refreshData();
       } catch (error) {
-        // 🛡️ 帳目安全機制：連線有任何閃失，1秒鐘吐回資料，絕不造成呆帳
         alert("🚨 櫃檯對帳衝突防禦：結帳連線超時或失敗（原因：" + error.message + "）。剛剛結帳的明細已安全復原，請重新點擊");
         delete optimisticPaidTables[table];
         allOrders.forEach(o => { if (o && rows.includes(o.row)) o.status = "未結帳"; });
@@ -386,32 +358,6 @@
       allOrders = allOrders.filter(o => o && !(o.table === table && o.status === "已結帳"));
       renderTableBill(table);
       updateTableStatusBadges();
-    }
-
-    async function submit公關Shot(staffId, evt) {
-      if (!activeTable) {
-        alert("請先在上方點選桌號，才能記錄招待紀錄喔！");
-        return;
-      }
-      
-      const btn = evt.currentTarget || evt.target;
-      const originalText = btn.innerText;
-      
-      btn.innerText = "✓ 已記錄";
-      btn.className = "py-2.5 text-xs font-black rounded-xl bg-green-600 text-white transition";
-      setTimeout(() => {
-        btn.innerText = originalText;
-        btn.className = "py-2.5 text-xs font-bold rounded-xl border border-pink-900/40 bg-pink-950/10 text-pink-400 hover:bg-pink-600 hover:text-white transition active:scale-95";
-      }, 1200);
-
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: "record公關Shot", tableNum: activeTable, staffId: staffId })
-        });
-        refreshData();
-      } catch (e) { console.error("招待紀錄失敗:", e); }
     }
 
     async function cancelSingleOrder(row) {
