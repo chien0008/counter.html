@@ -61,7 +61,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
   <section id="panel-kds" class="block space-y-4">
     <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl border-2 border-zinc-950 sharp-card gap-2">
       <div class="flex items-center gap-3">
-        <h2 class="text-base sm:text-lg font-black text-zinc-950">各桌未出單現況（依桌號分區展示）</h2>
+        <h2 class="text-base sm:text-lg font-black text-zinc-950">各桌未出單現況</h2>
         <span class="text-xs sm:text-sm font-bold text-zinc-600">（製作完成請打勾出單）</span>
       </div>
       <span id="kds-total-summary" class="text-sm sm:text-base bg-amber-300 text-zinc-950 font-black px-4 py-1 rounded-full border-2 border-zinc-950">
@@ -84,7 +84,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
       <div class="bg-white p-5 rounded-2xl border-2 border-zinc-950 sharp-card">
         <h2 class="text-base font-black text-zinc-950 mb-3 flex justify-between items-center">
           <span>選擇控制桌號</span>
-          <span class="text-xs font-bold text-rose-600">紅色：尚有未出單｜綠色：已有可結帳品項</span>
+          <span class="text-xs font-bold text-rose-600">紅色：尚有未出單｜綠色：已出單可結</span>
         </h2>
         <div id="table-buttons-grid" class="grid grid-cols-2 gap-2.5"></div>
       </div>
@@ -266,6 +266,15 @@ header,section>div,.sharp-card{box-shadow:none!important}
       }
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     function renderKDS() {
       const container = document.getElementById('kds-grouped-container');
       const unfulfilled = allOrders.filter(o =>
@@ -318,11 +327,21 @@ header,section>div,.sharp-card{box-shadow:none!important}
                 let displayTime = "剛才";
                 if (item.time && item.time.includes(' ')) displayTime = item.time.split(' ')[1];
 
+                const note = String(item.note || "").trim();
+                const noteHtml = note ? `
+                    <div class="mt-2 border-l-4 border-red-600 bg-red-50 px-3 py-2">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="inline-block bg-red-600 text-white border border-red-600 px-2 py-0.5 text-xs font-black tracking-wider">備註客製</span>
+                      </div>
+                      <p class="text-sm sm:text-base font-black text-red-700 break-words">${escapeHtml(note)}</p>
+                    </div>` : "";
+
                 return `
                 <div id="kds-card-${item.row}" class="bg-zinc-50 p-3 rounded-xl border-2 border-zinc-900 flex justify-between items-center gap-2">
                   <div class="min-w-0 flex-1">
-                    <p class="font-black text-zinc-950 text-base sm:text-lg truncate">${item.item || "未知品項"}</p>
-                    <p class="text-xs font-bold text-zinc-500">${displayTime}</p>
+                    <p class="font-black text-zinc-950 text-base sm:text-lg">${escapeHtml(item.item || "未知品項")}</p>
+                    ${noteHtml}
+                    <p class="text-xs font-bold text-zinc-500 mt-1">${displayTime}</p>
                   </div>
                   <div class="flex items-center gap-2 flex-shrink-0">
                     <button onclick="cancelSingleOrder(${item.row})" title="取消退單"
@@ -696,7 +715,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
         const result = await res.json();
 
         if (result.success) {
-          msg.textContent = `✅ ${counterChosenTable} 桌代點成功！已通知吧台做酒！`;
+          msg.textContent = `✅ ${counterChosenTable} 桌點餐完成，請至出單現況總覽查看`;
           msg.className = "text-sm text-center font-black text-emerald-950 bg-emerald-200 p-2 rounded-lg border border-emerald-400 block";
           counterCart = [];
           renderCounterCart();
