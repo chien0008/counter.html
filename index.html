@@ -3,162 +3,370 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>See Ya Bar - 櫃檯接單與後結帳系統</title>
+  <title>See Ya Bar - 智慧控盤與櫃檯結帳系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
   <style>
-    body { background: #0c0a09; color: #e7e5e4; font-family: sans-serif; }
-    .active-tab { border-bottom: 3px solid #f59e0b; color: #f59e0b; font-weight: bold; }
-    .neon-card { border: 1px solid rgba(217, 119, 6, 0.15); background: rgba(28, 25, 23, 0.6); transition: all 0.2s ease; }
+    :root {
+      --sunset-dark: #0c0a09;
+      --sunset-amber: #1c1917;
+      --neon-amber: #f59e0b;
+      --neon-success: #22c55e;
+    }
+    body {
+      background-color: var(--sunset-dark);
+      color: #e7e5e4;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .active-tab {
+      border-bottom: 3px solid #f59e0b;
+      color: #f59e0b;
+      font-weight: 700;
+    }
+    .neon-card {
+      border: 1px solid rgba(217, 119, 6, 0.2);
+      background: rgba(28, 25, 23, 0.7);
+      backdrop-filter: blur(8px);
+    }
+    .compact-scroll::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    .compact-scroll::-webkit-scrollbar-thumb {
+      background: #44403c;
+      border-radius: 4px;
+    }
+    .sub-btn.active {
+      background: #f59e0b;
+      color: #0c0a09;
+      border-color: #f59e0b;
+      font-weight: bold;
+    }
   </style>
 </head>
-<body class="p-4 md:p-8 min-h-screen">
+<body class="p-3 sm:p-6 min-h-screen flex flex-col">
 
-  <header class="flex justify-between items-center border-b border-stone-800 pb-4 mb-6">
+  <header class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-stone-800 pb-4 mb-6 gap-4">
     <div class="flex items-center gap-3">
-      <span class="text-2xl">🍹</span>
+      <span class="text-3xl">🍹</span>
       <div>
-        <h1 class="text-xl font-black text-amber-500 tracking-widest">See Ya Bar</h1>
-        <p class="text-xs text-stone-500">智慧控盤中樞 6.3</p>
+        <h1 class="text-2xl font-black text-amber-500 tracking-widest flex items-center gap-2">
+          SEE YA BAR
+          <span class="text-xs font-normal text-amber-400/60 bg-amber-950/60 border border-amber-800/50 px-2 py-0.5 rounded-full">智慧控盤 v7.0</span>
+        </h1>
+        <p class="text-xs text-stone-500">小琉球・深夜微醺 ｜ 櫃檯與吧台控盤中樞</p>
       </div>
     </div>
-    <nav class="flex gap-6 text-sm">
-      <button id="tab-kds" class="py-2 px-1 active-tab transition" onclick="switchTab('kds')">出單現況總覽</button>
-      <button id="tab-pos" class="py-2 px-1 text-stone-400 hover:text-amber-400 transition" onclick="switchTab('pos')">桌況後結帳系統</button>
+    
+    <nav class="flex gap-2 sm:gap-6 text-xs sm:text-sm overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+      <button id="tab-kds" class="py-2 px-3 active-tab transition whitespace-nowrap flex items-center gap-1.5" onclick="switchTab('kds')">
+        <span>👨‍🍳 出單分桌總覽 (KDS)</span>
+        <span id="kds-header-badge" class="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full">0</span>
+      </button>
+      <button id="tab-pos" class="py-2 px-1 text-stone-400 hover:text-amber-400 transition whitespace-nowrap" onclick="switchTab('pos')">
+        💵 桌況後結帳系統 (POS)
+      </button>
+      <button id="tab-counter-order" class="py-2 px-1 text-stone-400 hover:text-amber-400 transition whitespace-nowrap" onclick="switchTab('counter-order')">
+        📝 櫃檯代點餐系統
+      </button>
     </nav>
   </header>
 
-  <!-- ==================== 面板一：出單現況總覽 ==================== -->
+  <!-- ==================== 面板一：出單分桌現況總覽 (KDS) ==================== -->
   <section id="panel-kds" class="block space-y-4">
-    <div class="flex justify-between items-center">
-      <h2 class="text-md font-bold text-stone-400 flex items-center gap-2">吧台待出餐品項 (勾選即完成)</h2>
-      <span id="kds-count" class="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">0 份未出</span>
+    <div class="flex justify-between items-center bg-stone-900/60 p-3 rounded-xl border border-stone-800">
+      <div class="flex items-center gap-2">
+        <h2 class="text-sm font-bold text-stone-300">各桌未出單統計（依桌號分區展示）</h2>
+        <span class="text-xs text-stone-500">（完成品項點擊右側 ✓ 打勾即出單）</span>
+      </div>
+      <span id="kds-total-summary" class="text-xs bg-amber-500/20 text-amber-400 font-bold px-3 py-1 rounded-full border border-amber-500/30">
+        總計 0 份未出餐
+      </span>
     </div>
-    <div id="kds-list" class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-      <div class="text-stone-500 italic text-sm">正在從 Google 載入吧台數據...</div>
+
+    <!-- KDS 桌號分組動態容器 -->
+    <div id="kds-grouped-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="col-span-full py-16 text-center text-stone-500 italic text-sm">
+        正在連線至 Google 後端載入吧台數據...
+      </div>
     </div>
   </section>
 
-  <!-- ==================== 面板二：桌況後結帳系統 ==================== -->
+  <!-- ==================== 面板二：桌況後結帳系統 (POS) ==================== -->
   <section id="panel-pos" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
-    
     <!-- 左側：桌號選擇按鈕牆 -->
-    <div class="lg:col-span-1 space-y-5">
-      <div class="space-y-3">
-        <h2 class="text-md font-bold text-stone-400">請選擇控制桌號</h2>
-        <div id="table-buttons-grid" class="grid grid-cols-3 gap-2"></div>
+    <div class="lg:col-span-1 space-y-4">
+      <div class="bg-stone-900/60 p-4 rounded-xl border border-stone-800">
+        <h2 class="text-sm font-bold text-stone-300 mb-3 flex justify-between items-center">
+          <span>選擇控制桌號</span>
+          <span class="text-[11px] font-normal text-stone-500">🔴 紅色代表有未結項目</span>
+        </h2>
+        <div id="table-buttons-grid" class="grid grid-cols-2 gap-2"></div>
       </div>
     </div>
 
-    <!-- 右側：該桌純粹的消費明細與現金收錢 -->
+    <!-- 右側：帳單明細與結帳操作 -->
     <div class="lg:col-span-2 bg-stone-900/90 rounded-2xl p-6 border border-stone-800 flex flex-col justify-between min-h-[480px]">
       <div>
         <div class="flex justify-between items-center border-b border-stone-800 pb-3 mb-4">
           <h3 class="text-lg font-bold flex items-center gap-2 text-amber-400">
-            <span>帳單明細 -</span> <span id="current-selected-table">未選擇桌號</span>
+            <span>帳單明細 -</span> <span id="current-selected-table" class="text-amber-300">未選擇桌號</span>
           </h3>
-          <span id="billing-status-badge" class="text-xs px-2 py-0.5 rounded-full bg-stone-800 text-stone-500">請先選桌</span>
+          <span id="billing-status-badge" class="text-xs px-2.5 py-1 rounded-full bg-stone-800 text-stone-500">請先選桌</span>
         </div>
-        <div id="table-bill-items" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 text-sm">
-          <p class="text-stone-500 italic text-center py-12">請點擊左側桌號按鈕，系統將自動合併今日所有追點帳單金額。</p>
+        <div id="table-bill-items" class="space-y-2.5 max-h-[320px] overflow-y-auto pr-2 text-sm compact-scroll">
+          <p class="text-stone-500 italic text-center py-16">請點擊左側桌號按鈕，系統將自動匯整該桌未結項目。</p>
         </div>
       </div>
 
       <div class="border-t border-stone-800 pt-4 mt-4 space-y-4">
         <div class="flex justify-between items-center px-2">
-          <span class="text-sm text-stone-400">今日累計總應收</span>
-          <span id="table-bill-total" class="text-2xl font-black text-amber-500">NT$ 0</span>
+          <span class="text-sm text-stone-400">桌次累計消費總額</span>
+          <span id="table-bill-total" class="text-2xl font-black text-amber-500 font-mono">NT$ 0</span>
         </div>
         <div id="action-buttons-zone">
-          <button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">收款結帳</button>
+          <button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">請先選擇桌號</button>
         </div>
         <p id="time-log-display" class="text-center text-xs text-stone-500 italic"></p>
       </div>
     </div>
   </section>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzy6YYrlhWaRMBy-MtSk_8pjjjcFexXMtARGHNHELPxqO0Zi1IpBCF-rstrGlYgvco/exec";
+  <!-- ==================== 面板三：櫃檯快捷代點餐系統 (POS Order) ==================== -->
+  <section id="panel-counter-order" class="hidden space-y-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- 左側：桌號與選單 -->
+      <div class="lg:col-span-2 space-y-4">
+        <!-- 櫃檯點餐桌號快速點選區 -->
+        <div id="counter-table-selector" class="bg-stone-900/80 p-4 rounded-xl border border-stone-800 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-amber-400 tracking-wider">第一步：確認代點桌號</span>
+            <span id="counter-selected-table-label" class="text-xs font-black text-rose-400">尚未選擇桌號</span>
+          </div>
+          <div id="counter-tables-grid" class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 text-xs"></div>
+        </div>
 
+        <!-- 類別切換標籤 -->
+        <div id="counter-category-filters" class="flex gap-2 overflow-x-auto pb-1 compact-scroll"></div>
+
+        <!-- 品項列表 (極簡無介紹，僅名稱/價格/冰塊按鈕) -->
+        <div id="counter-menu-items" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1 compact-scroll"></div>
+      </div>
+
+      <!-- 右側：現場點餐明細面板 -->
+      <div class="bg-stone-900/90 rounded-2xl p-5 border border-stone-800 flex flex-col justify-between min-h-[450px]">
+        <div>
+          <div class="flex justify-between items-center border-b border-stone-800 pb-3 mb-3">
+            <h3 class="font-bold text-amber-400 text-md flex items-center gap-2">
+              <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+              <span>櫃檯即時點餐單</span>
+            </h3>
+            <span id="counter-cart-count" class="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-mono">0 杯/份</span>
+          </div>
+
+          <div id="counter-cart-list" class="space-y-2 max-h-[300px] overflow-y-auto pr-1 text-sm compact-scroll">
+            <p class="text-stone-600 italic text-center py-16 text-xs">請點選左側餐點加入點餐單</p>
+          </div>
+        </div>
+
+        <div class="border-t border-stone-800 pt-3 mt-3 space-y-3">
+          <div class="flex justify-between items-center font-bold text-amber-300 text-base">
+            <span>合計金額</span>
+            <span id="counter-cart-total" class="font-mono text-xl text-amber-400">NT$ 0</span>
+          </div>
+          <button id="counter-submit-btn" onclick="submitCounterOrder()" class="w-full bg-amber-600 hover:bg-amber-500 text-stone-950 font-black py-3.5 rounded-xl transition shadow-lg shadow-amber-600/10 text-sm tracking-wider">
+            🚀 送出點餐至吧台與 Google Sheet
+          </button>
+          <p id="counter-status-msg" class="text-xs text-center hidden font-bold"></p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <script>
+    // API 網址 (兩系統統一使用同一後端)
+    const API_URL = "https://script.google.com/macros/s/AKfycbzy6YYrlhWaRMBy-MtSk_8pjjjcFexXMtARGHNHELPxqO0Zi1IpBCF-rstrGlYgvco/exec";
+    const BACKEND_URL = API_URL;
+
+    // 官方桌号清單
     const officialTableNames = [
-  "A1", "A2", "A3", "A4", "A5", "A6",
-  "吧台1", "吧台2", "吧台3", "吧台4", "吧台5", "吧台6",
-  "包廂"
+      "A1", "A2", "A3", "A4", "A5", "A6",
+      "吧台1", "吧台2", "吧台3", "吧台4", "吧台5", "吧台6",
+      "圓桌", "包廂"
     ];
 
+    // 菜單資料庫 (櫃檯代點餐系統專用，不顯示冗長介紹)
+    const MENU = {
+      alcohol: {
+        "招牌特調 Signature": [
+          {name: "真正優秀的女人，連罩杯都拿A", price: 350},
+          {name: "腳踏萬條船，踏都踏不完", price: 350},
+          {name: "我回妳是秒回，妳回我是輪迴", price: 350},
+          {name: "不求對象門當戶對，但求你姿勢要到位", price: 350}
+        ],
+        "經典調酒 Classic": [
+          {name: "Gimlet", price: 250},
+          {name: "Daiquiri", price: 250},
+          {name: "柯夢波丹", price: 250},
+          {name: "High ball", price: 250},
+          {name: "Gin tonic", price: 250},
+          {name: "Cuba Libre", price: 250},
+          {name: "長島冰茶", price: 300},
+          {name: "野格bomb", price: 300},
+          {name: "蜜桃特調", price: 320},
+          {name: "熱帶雙果特調", price: 320},
+          {name: "柚香青蘋特調", price: 320},
+          {name: "茶酒特調", price: 320}
+        ],
+        "啤酒 Beer (買五送一)": [
+          {name: "百威", price: 150},
+          {name: "可樂娜", price: 180}
+        ],
+        "Shot 烈酒 Shots": [
+          {name: "伏特加 Shot", price: 120},
+          {name: "琴酒 Shot", price: 120},
+          {name: "蘭姆酒 Shot", price: 120},
+          {name: "龍舌蘭 Shot", price: 120},
+          {name: "威士忌 Shot", price: 120},
+          {name: "特調 shots", price: 150}
+        ]
+      },
+      nonalcohol: {
+        "無酒精軟飲 Soft Drinks": [
+          {name: "可樂", price: 100},
+          {name: "氣泡水", price: 100},
+          {name: "通寧水", price: 100},
+          {name: "紅牛", price: 150},
+          {name: "蘋果汁", price: 100},
+          {name: "芭樂汁", price: 100},
+          {name: "蔓越莓汁", price: 100},
+          {name: "柳橙汁", price: 100}
+        ]
+      },
+      food: {
+        "隱藏版美食 Food": [
+          {name: "經典美味 (即將上線)", price: 0}
+        ]
+      }
+    };
+
+    // 全局狀態變數
     let allOrders = [];
     let activeTable = "";
     let isFetching = false;
     let optimisticPaidTables = {};
 
+    // 櫃檯點餐專用狀態
+    let counterChosenTable = "";
+    let counterCart = [];
+    let counterMainCategory = 'alcohol';
+    let counterSubCategory = Object.keys(MENU.alcohol)[0];
+
     function switchTab(tab) {
       document.getElementById('panel-kds').className = tab === 'kds' ? 'block space-y-4' : 'hidden';
       document.getElementById('panel-pos').className = tab === 'pos' ? 'grid grid-cols-1 lg:grid-cols-3 gap-6' : 'hidden';
-      document.getElementById('tab-kds').className = tab === 'kds' ? 'py-2 px-1 active-tab transition' : 'py-2 px-1 text-stone-400 hover:text-amber-400 transition';
+      document.getElementById('panel-counter-order').className = tab === 'counter-order' ? 'block space-y-5' : 'hidden';
+
+      document.getElementById('tab-kds').className = tab === 'kds' ? 'py-2 px-3 active-tab transition flex items-center gap-1.5' : 'py-2 px-1 text-stone-400 hover:text-amber-400 transition flex items-center gap-1.5';
       document.getElementById('tab-pos').className = tab === 'pos' ? 'py-2 px-1 active-tab transition' : 'py-2 px-1 text-stone-400 hover:text-amber-400 transition';
+      document.getElementById('tab-counter-order').className = tab === 'counter-order' ? 'py-2 px-1 active-tab transition' : 'py-2 px-1 text-stone-400 hover:text-amber-400 transition';
+
+      if (tab === 'counter-order') {
+        renderCounterMenu();
+      }
     }
 
-    function initTableButtons() {
-      const grid = document.getElementById('table-buttons-grid');
-      grid.innerHTML = officialTableNames.map(t => `
-        <button id="btn-table-${t}" onclick="selectTable('${t}')" 
-                class="py-3 text-sm font-bold rounded-xl border border-stone-800 bg-stone-900/40 text-stone-400 hover:border-amber-500/50 hover:text-amber-400 transition">
-          ${t}
-        </button>
-      `).join('');
-    }
-
-    async function refreshData() {
-      if (isFetching) return;
-      try {
-        isFetching = true;
-        const urlWithBuster = API_URL + "?_ts=" + new Date().getTime();
-        const res = await fetch(urlWithBuster, { method: "GET" });
-        allOrders = await res.json();
-        
-        if (Array.isArray(allOrders)) {
-          renderKDS();
-          if (activeTable) renderTableBill(activeTable);
-          updateTableStatusBadges();
-        }
-      } catch (e) { console.error("背景同步中...", e); }
-      finally { isFetching = false; }
-    }
-
+    /* =========================================================================
+       1. 出單現況總覽 (KDS) - 按桌號分區 (Table-Grouped Cards)
+       ========================================================================= */
     function renderKDS() {
-      const kdsList = document.getElementById('kds-list');
+      const container = document.getElementById('kds-grouped-container');
       const unfulfilled = allOrders.filter(o => o && o.cook === "未出單" && o.table && o.table.trim() !== "" && o.status !== "已取消");
-      
-      document.getElementById('kds-count').textContent = `${unfulfilled.length} 份未出`;
-      
+
+      document.getElementById('kds-header-badge').textContent = unfulfilled.length;
+      document.getElementById('kds-total-summary').textContent = `總計 ${unfulfilled.length} 份未出餐`;
+
       if (unfulfilled.length === 0) {
-        kdsList.innerHTML = `<div class="col-span-3 py-12 text-center text-stone-500 italic text-sm">所有酒水餐點均已出單完畢</div>`;
+        container.innerHTML = `
+          <div class="col-span-full py-16 text-center text-stone-500 italic text-sm bg-stone-900/40 rounded-2xl border border-stone-800">
+            🎉 吧台目前沒有任何待出單餐點！全部出單完畢！
+          </div>`;
         return;
       }
 
-      kdsList.innerHTML = unfulfilled.map(o => {
-        let displayTime = "剛才";
-        if (o.time && o.time.includes(' ')) displayTime = o.time.split(' ')[1];
+      // 將未出餐品項按「桌號」進行 Group By
+      const groupedByTable = {};
+      unfulfilled.forEach(order => {
+        const t = order.table.trim();
+        if (!groupedByTable[t]) groupedByTable[t] = [];
+        groupedByTable[t].push(order);
+      });
 
-        return `
-        <div id="kds-card-${o.row}" class="neon-card p-4 rounded-xl flex justify-between items-center border border-stone-800">
-          <div class="min-w-0 flex-1 pr-2">
-            <div class="flex items-center gap-2">
-              <span class="bg-amber-500 text-stone-950 text-xs font-black px-1.5 py-0.5 rounded flex-shrink-0">${o.table}</span>
-              <span class="text-xs text-stone-500 truncate">${displayTime}</span>
+      // 產生各桌卡片 HTML
+      let html = '';
+      Object.keys(groupedByTable).forEach(tableName => {
+        const ordersForThisTable = groupedByTable[tableName];
+
+        html += `
+        <div class="neon-card rounded-2xl p-4 flex flex-col justify-between border border-amber-500/20 bg-stone-900/80 shadow-lg">
+          <div>
+            <!-- 桌號抬頭 -->
+            <div class="flex justify-between items-center border-b border-stone-800 pb-2 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="bg-amber-500 text-stone-950 font-black text-xs px-2.5 py-1 rounded-md tracking-wider">${tableName} 桌</span>
+                <span class="text-xs font-bold text-amber-400/80">${ordersForThisTable.length} 個品項待出</span>
+              </div>
+              <span class="text-[11px] text-stone-500">吧台製作中</span>
             </div>
-            <p class="text-md font-bold mt-2 text-stone-200 truncate">${o.item || "未知品項"}</p>
-          </div>
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <button onclick="cancelSingleOrder(${o.row})" 
-                    class="px-2.5 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-600 hover:text-white transition text-xs font-bold">
-              ✕ 取消
-            </button>
-            <button onclick="changeStatus(${o.row}, 'cook_status', '已出單')" 
-                    class="w-8 h-8 rounded-full border border-green-500/40 bg-green-950/20 text-green-400 flex items-center justify-center hover:bg-green-500 hover:text-stone-950 transition text-sm">
-              ✓
-            </button>
+
+            <!-- 該桌待出餐清單 -->
+            <div class="space-y-2">
+              ${ordersForThisTable.map(item => {
+                let displayTime = "剛才";
+                if (item.time && item.time.includes(' ')) displayTime = item.time.split(' ')[1];
+
+                return `
+                <div id="kds-card-${item.row}" class="bg-stone-950/70 p-2.5 rounded-xl border border-stone-800/80 flex justify-between items-center gap-2">
+                  <div class="min-w-0 flex-1">
+                    <p class="font-bold text-stone-100 text-sm truncate">${item.item || "未知品項"}</p>
+                    <p class="text-[10px] text-stone-500">${displayTime}</p>
+                  </div>
+                  <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <button onclick="cancelSingleOrder(${item.row})" title="取消退單"
+                            class="px-2 py-1 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white transition text-xs font-bold">
+                      ✕ 取消
+                    </button>
+                    <button onclick="changeStatus(${item.row}, 'cook_status', '已出單')" title="完成出單"
+                            class="w-7 h-7 rounded-lg border border-green-500/40 bg-green-950/30 text-green-400 flex items-center justify-center hover:bg-green-500 hover:text-stone-950 transition text-xs font-bold">
+                      ✓
+                    </button>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
           </div>
         </div>`;
+      });
+
+      container.innerHTML = html;
+    }
+
+    /* =========================================================================
+       2. 桌況後結帳系統 (POS)
+       ========================================================================= */
+    function initTableButtons() {
+      const grid = document.getElementById('table-buttons-grid');
+      grid.innerHTML = officialTableNames.map(t => {
+        let colSpan = (t === "圓桌" || t === "包廂") ? "col-span-2" : "col-span-1";
+        return `
+          <button id="btn-table-${t}" onclick="selectTable('${t}')" 
+                  class="${colSpan} py-3 text-sm font-bold rounded-xl border border-stone-800 bg-stone-900/40 text-stone-400 hover:border-amber-500/50 hover:text-amber-400 transition">
+            ${t}
+          </button>
+        `;
       }).join('');
     }
 
@@ -166,16 +374,17 @@
       officialTableNames.forEach(t => {
         const btn = document.getElementById(`btn-table-${t}`);
         if (!btn) return;
-        
+
         const isOptimisticPaid = optimisticPaidTables[t];
         const hasUnpaidAndCooked = allOrders.some(o => o && o.table === t && o.status === "未結帳" && o.cook === "已出單");
-        
+        let colSpan = (t === "圓桌" || t === "包廂") ? "col-span-2" : "col-span-1";
+
         if (t === activeTable) {
-          btn.className = "py-3 text-sm font-bold rounded-xl border-2 border-amber-500 bg-amber-500/10 text-amber-400 transition";
+          btn.className = `${colSpan} py-3 text-sm font-bold rounded-xl border-2 border-amber-500 bg-amber-500/10 text-amber-400 transition shadow-md shadow-amber-500/10`;
         } else if (hasUnpaidAndCooked && !isOptimisticPaid) {
-          btn.className = "py-3 text-sm font-bold rounded-xl border border-rose-500/40 bg-rose-950/20 text-rose-400 hover:bg-rose-900/30 transition";
+          btn.className = `${colSpan} py-3 text-sm font-bold rounded-xl border border-rose-500/50 bg-rose-950/30 text-rose-400 hover:bg-rose-900/40 transition animate-pulse`;
         } else {
-          btn.className = "py-3 text-sm font-bold rounded-xl border border-stone-800 bg-stone-900/40 text-stone-500 hover:border-stone-700 hover:text-stone-300 transition";
+          btn.className = `${colSpan} py-3 text-sm font-bold rounded-xl border border-stone-800 bg-stone-900/40 text-stone-500 hover:border-stone-700 hover:text-stone-300 transition`;
         }
       });
     }
@@ -194,32 +403,32 @@
 
       const isOptimisticPaid = optimisticPaidTables[table];
       const activeTableRows = isOptimisticPaid ? [] : allOrders.filter(o => o && o.table === table && o.status === "未結帳");
-      
+
       const unpaidAndCookedRows = activeTableRows.filter(o => o.cook === "已出單");
       const makingCount = activeTableRows.filter(o => o.cook === "未出單").length;
 
       if (isOptimisticPaid) {
         let snapshot = optimisticPaidTables[table];
-        let htmlContent = `<div class="opacity-40 space-y-2">`;
+        let htmlContent = `<div class="opacity-50 space-y-2">`;
         snapshot.items.forEach(itemText => {
           htmlContent += `
-            <div class="flex justify-between items-center bg-stone-950 p-2.5 rounded-lg">
+            <div class="flex justify-between items-center bg-stone-950 p-2.5 rounded-lg border border-stone-800/40">
               <p class="text-stone-400 line-through">${itemText} (本次已結清)</p>
               <span class="font-mono text-stone-500">NT$ --</span>
             </div>`;
         });
         htmlContent += `</div>`;
-        
+
         billItemsContainer.innerHTML = htmlContent;
         document.getElementById('table-bill-total').textContent = `NT$ ${snapshot.total.toLocaleString()}`;
-        document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-bold";
-        
+        document.getElementById('billing-status-badge').className = "text-xs px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 font-bold border border-green-500/30";
+
         let badgeText = "已結清(" + snapshot.payMethod + ")";
         if (snapshot.bankLast5) badgeText += "[" + snapshot.bankLast5 + "]";
         document.getElementById('billing-status-badge').textContent = badgeText;
 
         actionZone.innerHTML = `
-          <button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-md tracking-widest active:scale-95 duration-150 shadow-lg shadow-amber-500/10">
+          <button onclick="resetTableToEmpty('${table}')" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-sm tracking-widest active:scale-95 duration-150 shadow-lg shadow-amber-500/10">
             🔄 下一組客人（重設空桌）
           </button>
         `;
@@ -228,11 +437,11 @@
       }
 
       if (activeTableRows.length === 0) {
-        billItemsContainer.innerHTML = `<p class="text-stone-600 italic text-center py-12">該桌目前是乾淨空桌，無任何未結帳單。🧹</p>`;
+        billItemsContainer.innerHTML = `<p class="text-stone-600 italic text-center py-16">該桌目前是乾淨空桌，無任何未結帳單。🧹</p>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
-        document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-stone-800 text-stone-500";
+        document.getElementById('billing-status-badge').className = "text-xs px-2.5 py-1 rounded-full bg-stone-800 text-stone-500";
         document.getElementById('billing-status-badge').textContent = "無開單";
-        actionZone.innerHTML = `<button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">收款結帳</button>`;
+        actionZone.innerHTML = `<button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">請先選取有消費的桌號</button>`;
         timeLog.textContent = "";
         return;
       }
@@ -240,56 +449,56 @@
       if (unpaidAndCookedRows.length > 0) {
         let totalSum = 0;
         let htmlContent = `<div class="space-y-2">`;
-        
+
         unpaidAndCookedRows.forEach(o => {
           let price = parseInt(o.total.replace(/[^0-9]/g, '')) || 0;
           totalSum += price;
           htmlContent += `
-            <div class="flex justify-between items-center bg-stone-900 p-2.5 rounded-lg border border-stone-800/60">
+            <div class="flex justify-between items-center bg-stone-900 p-2.5 rounded-lg border border-stone-800/80">
               <div>
-                <p class="font-bold text-stone-200">${o.item || "未知品項"}</p>
+                <p class="font-bold text-stone-100">${o.item || "未知品項"}</p>
                 <p class="text-[11px] text-stone-500">點單時間: ${o.time ? (o.time.includes(' ') ? o.time.split(' ')[1] : o.time) : "未知"} <span class="text-green-400 font-bold ml-1">✓已出單</span></p>
               </div>
-              <span class="font-mono text-amber-500">NT$ ${price}</span>
+              <span class="font-mono text-amber-400 font-bold">NT$ ${price}</span>
             </div>`;
         });
-        
+
         if (makingCount > 0) {
-          htmlContent += `<p class="text-xs text-amber-600 italic text-center pt-2">提示：吧台尚有 ${makingCount} 筆餐點製作中，尚未出單不計入此帳單。</p>`;
+          htmlContent += `<p class="text-xs text-amber-500/80 italic text-center pt-2">⚠️ 提示：吧台尚有 ${makingCount} 筆餐點製作中，尚未出單不計入此帳單。</p>`;
         }
         htmlContent += `</div>`;
-        
+
         billItemsContainer.innerHTML = htmlContent;
         document.getElementById('table-bill-total').textContent = `NT$ ${totalSum.toLocaleString()}`;
-        document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold";
+        document.getElementById('billing-status-badge').className = "text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30";
         document.getElementById('billing-status-badge').textContent = "有酒水已出單";
 
         const rowIndices = unpaidAndCookedRows.map(o => o.row).join(',');
         actionZone.innerHTML = `
           <div class="grid grid-cols-2 gap-3">
-            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '現金')" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-sm shadow-lg shadow-amber-500/10">💵 現金結帳</button>
-            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '銀行轉帳')" class="w-full py-3.5 bg-sky-600 hover:bg-sky-500 text-white font-black rounded-xl transition text-sm shadow-lg shadow-sky-600/10">🏦 銀行轉帳</button>
+            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '現金')" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black rounded-xl transition text-sm shadow-lg shadow-amber-500/10 active:scale-95">💵 現金結帳</button>
+            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '銀行轉帳')" class="w-full py-3.5 bg-sky-600 hover:bg-sky-500 text-white font-black rounded-xl transition text-sm shadow-lg shadow-sky-600/10 active:scale-95">🏦 銀行轉帳</button>
           </div>
         `;
         timeLog.textContent = "";
 
       } else if (makingCount > 0) {
         billItemsContainer.innerHTML = `
-          <div class="py-8 text-center space-y-2">
+          <div class="py-12 text-center space-y-2">
             <p class="text-amber-500 font-bold text-sm">餐點製作中，尚未出單</p>
-            <p class="text-xs text-stone-500 max-w-xs mx-auto">請先至「出單現況總覽」打勾出單，品項才會流進結帳明細算錢</p>
+            <p class="text-xs text-stone-500 max-w-xs mx-auto">請先至「出單分桌總覽」按 ✓ 出單，品項才會流進結帳明細計算金額</p>
           </div>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
-        document.getElementById('billing-status-badge').className = "text-xs px-2 py-0.5 rounded-full bg-stone-800 text-amber-600";
+        document.getElementById('billing-status-badge').className = "text-xs px-2.5 py-1 rounded-full bg-stone-800 text-amber-500 font-bold";
         document.getElementById('billing-status-badge').textContent = "等待吧台出單";
-        actionZone.innerHTML = `<button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">等待出單後解鎖</button>`;
+        actionZone.innerHTML = `<button disabled class="w-full py-3.5 bg-stone-800 text-stone-600 font-bold rounded-xl cursor-not-allowed text-md tracking-wider">等待出單後解鎖結帳</button>`;
         timeLog.textContent = "";
       }
     }
 
     async function batchPay(rowStr, table, totalAmount, payMethod) {
       let bankLast5 = "";
-      
+
       if (payMethod === "銀行轉帳") {
         const input = prompt("🏦 請輸入顧客轉帳的「帳號末 5 碼」以利核對（例如 88888）：");
         if (input === null) return;
@@ -302,11 +511,11 @@
 
       const rows = rowStr.split(',').map(r => parseInt(r));
       const itemsSnapshot = [];
-      
+
       allOrders.forEach(o => {
         if (o && rows.includes(o.row)) {
           itemsSnapshot.push(o.item);
-          o.status = "已結帳"; 
+          o.status = "已結帳";
         }
       });
 
@@ -341,12 +550,12 @@
             bankLast5: bankLast5
           })
         });
-        
+
         const result = await response.json();
-        if(!result.success) throw new Error(result.error || "大腦拒絕寫入");
+        if(!result.success) throw new Error(result.error || "後端寫入拒絕");
         refreshData();
       } catch (error) {
-        alert("🚨 櫃檯對帳衝突防禦：結帳連線超時或失敗（原因：" + error.message + "）。剛剛結帳的明細已安全復原，請重新點擊");
+        alert("🚨 結帳連線超時或失敗（原因：" + error.message + "）。已安全復原明細，請重新點擊！");
         delete optimisticPaidTables[table];
         allOrders.forEach(o => { if (o && rows.includes(o.row)) o.status = "未結帳"; });
         renderTableBill(table);
@@ -355,23 +564,255 @@
     }
 
     function resetTableToEmpty(table) {
-      delete optimisticPaidTables[table]; 
+      delete optimisticPaidTables[table];
       allOrders = allOrders.filter(o => o && !(o.table === table && o.status === "已結帳"));
       renderTableBill(table);
       updateTableStatusBadges();
     }
 
-    async function cancelSingleOrder(row) {
-      if (!confirm("⚠️ 吧台安全警告：確定要取消並作廢這筆點餐嗎？")) return;
-      const card = document.getElementById(`kds-card-${row}`);
-      if (card) {
-        card.style.opacity = "0";
-        card.style.transform = "scale(0.9)";
-        setTimeout(() => card.remove(), 200);
+    /* =========================================================================
+       3. 櫃檯快捷代點餐系統 (Counter POS Order) - 極簡不帶介紹
+       ========================================================================= */
+    function initCounterTableGrid() {
+      const grid = document.getElementById('counter-tables-grid');
+      grid.innerHTML = officialTableNames.map(t => `
+        <button id="counter-btn-${t}" onclick="selectCounterTable('${t}')" 
+                class="py-2.5 font-bold rounded-lg border border-stone-800 bg-stone-950 text-stone-400 hover:border-amber-500/50 hover:text-amber-400 active:scale-95 transition">
+          ${t}
+        </button>
+      `).join('');
+    }
+
+    function selectCounterTable(table) {
+      counterChosenTable = table;
+      officialTableNames.forEach(t => {
+        const btn = document.getElementById(`counter-btn-${t}`);
+        if (!btn) return;
+        if (t === table) {
+          btn.className = "py-2.5 font-bold rounded-lg border border-amber-500 bg-amber-500 text-stone-950 shadow-md shadow-amber-500/20 active:scale-95 transition";
+        } else {
+          btn.className = "py-2.5 font-bold rounded-lg border border-stone-800 bg-stone-950 text-stone-400 hover:border-amber-500/50 hover:text-amber-400 active:scale-95 transition";
+        }
+      });
+
+      const label = document.getElementById('counter-selected-table-label');
+      label.textContent = `定桌：${table} 桌`;
+      label.className = "text-xs font-black text-green-400";
+    }
+
+    function renderCounterMenu() {
+      initCounterTableGrid();
+
+      // 渲染分類 Tabs
+      const catFilters = document.getElementById('counter-category-filters');
+      let subCats = Object.keys(MENU[counterMainCategory]);
+
+      catFilters.innerHTML = `
+        <div class="flex gap-2 mb-2 w-full">
+          <button onclick="setCounterMainCat('alcohol')" class="sub-btn px-3 py-1 rounded-full text-xs border border-stone-700 ${counterMainCategory==='alcohol'?'active':''}">有酒精</button>
+          <button onclick="setCounterMainCat('nonalcohol')" class="sub-btn px-3 py-1 rounded-full text-xs border border-stone-700 ${counterMainCategory==='nonalcohol'?'active':''}">無酒精</button>
+          <button onclick="setCounterMainCat('food')" class="sub-btn px-3 py-1 rounded-full text-xs border border-stone-700 ${counterMainCategory==='food'?'active':''}">隱藏版美食</button>
+        </div>
+      `;
+
+      // 渲染子分類及品項 (極簡模式：僅品名、冰塊按鈕、價格)
+      const menuItemsContainer = document.getElementById('counter-menu-items');
+      let itemsList = MENU[counterMainCategory][counterSubCategory] || [];
+
+      menuItemsContainer.innerHTML = itemsList.map(item => {
+        let isFood = counterMainCategory === 'food';
+        let actionButtons = '';
+
+        if (isFood) {
+          actionButtons = `
+            <button onclick="addCounterCart('${item.name.replace(/'/g, "\\'")}', ${item.price}, 'food', '')" 
+                    class="bg-amber-600 text-stone-950 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-500 transition">
+              ＋加入
+            </button>`;
+        } else {
+          actionButtons = `
+            <div class="flex gap-1.5">
+              <button onclick="addCounterCart('${item.name.replace(/'/g, "\\'")}', ${item.price}, 'drink', '')" 
+                      class="bg-stone-800 text-amber-400 border border-amber-800/80 rounded-lg px-2.5 py-1.5 text-xs font-bold hover:bg-stone-700 transition">
+                ＋正常
+              </button>
+              <button onclick="addCounterCart('${item.name.replace(/'/g, "\\'")}', ${item.price}, 'drink', '去冰')" 
+                      class="bg-amber-600/30 text-amber-200 border border-amber-600/50 rounded-lg px-2.5 py-1.5 text-xs font-bold hover:bg-amber-600 hover:text-white transition">
+                ❄️去冰
+              </button>
+            </div>`;
+        }
+
+        return `
+          <div class="bg-stone-900/80 border border-stone-800/80 rounded-xl p-3 flex justify-between items-center gap-2">
+            <div class="min-w-0 flex-1">
+              <!-- 🎯 依照要求：僅顯示品名與價格，徹底移除英文與簡介敘述 -->
+              <h4 class="font-bold text-stone-100 text-sm truncate">${item.name}</h4>
+              <p class="text-amber-500 font-bold text-xs mt-0.5 font-mono">NT$ ${item.price}</p>
+            </div>
+            ${actionButtons}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setCounterMainCat(cat) {
+      counterMainCategory = cat;
+      counterSubCategory = Object.keys(MENU[cat])[0];
+      renderCounterMenu();
+    }
+
+    function addCounterCart(name, price, type, note) {
+      if (!counterChosenTable) {
+        alert("⚠️ 請先在上方選取桌號，再進行點餐！");
+        return;
       }
-      
+
+      const existing = counterCart.find(i => i.name === name && i.note === note);
+      if (existing) {
+        existing.qty++;
+      } else {
+        counterCart.push({ name, price, qty: 1, note, type });
+      }
+      renderCounterCart();
+    }
+
+    function renderCounterCart() {
+      const container = document.getElementById('counter-cart-list');
+      const countLabel = document.getElementById('counter-cart-count');
+      const totalLabel = document.getElementById('counter-cart-total');
+
+      const totalQty = counterCart.reduce((s, i) => s + i.qty, 0);
+      const totalPrice = counterCart.reduce((s, i) => s + (i.price * i.qty), 0);
+
+      countLabel.textContent = `${totalQty} 杯/份`;
+      totalLabel.textContent = `NT$ ${totalPrice}`;
+
+      if (counterCart.length === 0) {
+        container.innerHTML = `<p class="text-stone-600 italic text-center py-16 text-xs">請點選左側餐點加入點餐單</p>`;
+        return;
+      }
+
+      container.innerHTML = counterCart.map((item, idx) => {
+        let noteBadge = item.note === "去冰" ? `<span class="text-sky-400 font-bold text-[10px] bg-sky-950/60 px-1.5 py-0.5 rounded">去冰</span>` : '';
+        return `
+          <div class="bg-stone-950/60 border border-stone-800 p-2.5 rounded-xl flex justify-between items-center text-xs">
+            <div class="min-w-0 flex-1 pr-2">
+              <p class="font-bold text-stone-200 truncate">${item.name} ${noteBadge}</p>
+              <p class="text-stone-500 font-mono">NT$ ${item.price}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center bg-stone-900 rounded-lg border border-stone-800">
+                <button onclick="changeCounterQty(${idx}, -1)" class="px-2 py-0.5 text-amber-500 font-bold hover:bg-stone-800">-</button>
+                <span class="px-2 text-stone-200 font-bold font-mono">${item.qty}</span>
+                <button onclick="changeCounterQty(${idx}, 1)" class="px-2 py-0.5 text-amber-500 font-bold hover:bg-stone-800">+</button>
+              </div>
+              <span class="font-mono text-amber-400 font-bold w-12 text-right">NT$${item.price * item.qty}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function changeCounterQty(idx, delta) {
+      if (counterCart[idx]) {
+        counterCart[idx].qty += delta;
+        if (counterCart[idx].qty <= 0) counterCart.splice(idx, 1);
+        renderCounterCart();
+      }
+    }
+
+    async function submitCounterOrder() {
+      const btn = document.getElementById('counter-submit-btn');
+      const msg = document.getElementById('counter-status-msg');
+
+      if (!counterChosenTable) {
+        alert("⚠️ 請先在上方選取桌號！");
+        return;
+      }
+      if (counterCart.length === 0) {
+        alert("⚠️ 購物車目前是空的，請先選擇餐點！");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "正在傳送點餐至後端...";
+      msg.classList.add('hidden');
+
+      // 核心拆彈：數量 > 1 的品項拆開成獨立展平物件送出
+      const expandedItems = [];
+      counterCart.forEach(item => {
+        for (let q = 0; q < item.qty; q++) {
+          expandedItems.push({
+            name: item.name,
+            price: item.price,
+            quantity: 1,
+            note: item.note === "去冰" ? "去冰" : "正常"
+          });
+        }
+      });
+
+      const orderData = {
+        tableNum: counterChosenTable,
+        totalAmount: counterCart.reduce((s, i) => s + (i.price * i.qty), 0),
+        items: expandedItems
+      };
+
+      try {
+        const res = await fetch(BACKEND_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(orderData)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          msg.textContent = `✅ ${counterChosenTable} 桌代點成功！已通知吧台做酒！`;
+          msg.className = "text-xs text-center font-bold text-green-400 block";
+          counterCart = [];
+          renderCounterCart();
+          refreshData(); // 即時拉取最新數據
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (err) {
+        msg.textContent = `❌ 送出失敗：${err.message}`;
+        msg.className = "text-xs text-center font-bold text-red-400 block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🚀 送出點餐至吧台與 Google Sheet";
+      }
+    }
+
+    /* =========================================================================
+       4. 背景輪詢與通訊函式
+       ========================================================================= */
+    async function refreshData() {
+      if (isFetching) return;
+      try {
+        isFetching = true;
+        const urlWithBuster = API_URL + "?_ts=" + new Date().getTime();
+        const res = await fetch(urlWithBuster, { method: "GET" });
+        allOrders = await res.json();
+
+        if (Array.isArray(allOrders)) {
+          renderKDS();
+          if (activeTable) renderTableBill(activeTable);
+          updateTableStatusBadges();
+        }
+      } catch (e) {
+        console.error("背景數據同步中...", e);
+      } finally {
+        isFetching = false;
+      }
+    }
+
+    async function cancelSingleOrder(row) {
+      if (!confirm("⚠️ 確定要取消作廢這筆點餐嗎？")) return;
+
       const bakOrders = [...allOrders];
       allOrders = allOrders.filter(o => o && o.row !== row);
+      renderKDS();
 
       try {
         const response = await fetch(API_URL, {
@@ -391,13 +832,8 @@
 
     async function changeStatus(row, type, value) {
       if (type === 'cook_status' && value === '已出單') {
-        const card = document.getElementById(`kds-card-${row}`);
-        if (card) {
-          card.style.opacity = "0";
-          card.style.transform = "scale(0.9)";
-          setTimeout(() => card.remove(), 200);
-        }
         allOrders.forEach(o => { if (o && o.row === row) o.cook = "已出單"; });
+        renderKDS();
       }
       try {
         await fetch(API_URL, {
@@ -406,12 +842,18 @@
           body: JSON.stringify({ action: "updateStatus", row: row, type: type, value: value })
         });
         refreshData();
-      } catch (e) { console.error("更新失敗:", e); }
+      } catch (e) {
+        console.error("更新狀態失敗:", e);
+      }
     }
 
-    setInterval(refreshData, 3000);
-    initTableButtons();
-    refreshData();
+    // 啟動系統
+    window.onload = function() {
+      initTableButtons();
+      refreshData();
+      setInterval(refreshData, 3000); // 3 秒自動同步
+      lucide.createIcons();
+    };
   </script>
 </body>
 </html>
