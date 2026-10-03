@@ -242,6 +242,10 @@ header,section>div,.sharp-card{box-shadow:none!important}
     let isFetching = false;
     let optimisticPaidTables = {};
 
+    // 已按下「出單」但後端尚未確認完成的列。
+    // 自動同步期間仍隱藏這些列，避免 Google Sheet 尚未更新時又跳回 KDS。
+    const pendingCookRows = new Set();
+
     // 櫃檯代點狀態
     let counterChosenTable = "";
     let counterCart = [];
@@ -264,7 +268,14 @@ header,section>div,.sharp-card{box-shadow:none!important}
 
     function renderKDS() {
       const container = document.getElementById('kds-grouped-container');
-      const unfulfilled = allOrders.filter(o => o && o.cook === "未出單" && o.table && o.table.trim() !== "" && o.status !== "已取消");
+      const unfulfilled = allOrders.filter(o =>
+        o &&
+        o.cook === "未出單" &&
+        o.table &&
+        o.table.trim() !== "" &&
+        o.status !== "已取消" &&
+        !pendingCookRows.has(o.row)
+      );
 
       document.getElementById('kds-header-badge').textContent = unfulfilled.length;
       document.getElementById('kds-total-summary').textContent = `總計 ${unfulfilled.length} 份未出餐`;
@@ -711,6 +722,12 @@ header,section>div,.sharp-card{box-shadow:none!important}
         allOrders = await res.json();
 
         if (Array.isArray(allOrders)) {
+          // 如果某列正在送出中，即使這次 GET 還讀到「未出單」，
+          // 前端也先維持「已出單」狀態，避免 KDS / POS 短暫倒退。
+          allOrders.forEach(o => {
+            if (o && pendingCookRows.has(o.row)) o.cook = "已出單";
+          });
+
           renderKDS();
           if (activeTable) renderTableBill(activeTable);
           updateTableStatusBadges();
@@ -746,19 +763,59 @@ header,section>div,.sharp-card{box-shadow:none!important}
     }
 
     async function changeStatus(row, type, value) {
-      if (type === 'cook_status' && value === '已出單') {
-        allOrders.forEach(o => { if (o && o.row === row) o.cook = "已出單"; });
-        renderKDS();
-      }
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: "updateStatus", row: row, type: type, value: value })
+      const isCookDone = type === "cook_status" && value === "已出單";
+
+      // 防止同一筆在請求尚未完成前被重複點擊。
+      if (isCookDone && pendingCookRows.has(row)) return;
+
+      if (isCookDone) {
+        pendingCookRows.add(row);
+
+        // 先做樂觀更新：按下勾選後立即從 KDS 消失，
+        // POS 也立即視為已出單，不必等待網路往返。
+        allOrders.forEach(o => {
+          if (o && o.row === row) o.cook = "已出單";
         });
-        refreshData();
+
+        renderKDS();
+        if (activeTable) renderTableBill(activeTable);
+        updateTableStatusBadges();
+      }
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({
+            action: "updateStatus",
+            row: row,
+            type: type,
+            value: value
+          })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || "後端更新失敗");
+        }
+
+        // 後端已確認寫入成功後才解除本地鎖定。
+        if (isCookDone) pendingCookRows.delete(row);
+
+        await refreshData();
+
       } catch (e) {
         console.error("更新狀態失敗:", e);
+
+        // 失敗時解除鎖定，重新向後端取得真正狀態。
+        if (isCookDone) pendingCookRows.delete(row);
+
+        await refreshData();
+
+        if (isCookDone) {
+          alert("出單狀態更新失敗，品項已恢復，請重新操作。");
+        }
       }
     }
 
