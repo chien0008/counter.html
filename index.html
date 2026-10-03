@@ -8,62 +8,36 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;900&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
   <style>
-    :root {
-      --bg-main: #f8fafc;
-      --card-bg: #ffffff;
-      --text-main: #09090b;
-      --border-dark: #18181b;
-      --accent-amber: #d97706;
-      --accent-amber-light: #fef3c7;
-    }
-    body {
-      background-color: var(--bg-main);
-      color: var(--text-main);
-      font-family: 'Noto Sans TC', 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .active-tab {
-      border-bottom: 4px solid #18181b;
-      color: #09090b;
-      font-weight: 900;
-      background-color: #ffffff;
-    }
-    .sharp-card {
-      background: #ffffff;
-      border: 2px solid #09090b;
-      box-shadow: 4px 4px 0px #09090b;
-    }
-    .sharp-button {
-      border: 2px solid #09090b;
-      box-shadow: 2px 2px 0px #09090b;
-      transition: all 0.1s ease;
-    }
-    .sharp-button:active {
-      transform: translate(2px, 2px);
-      box-shadow: 0px 0px 0px #09090b;
-    }
-    .sub-btn-light.active {
-      background-color: #09090b;
-      color: #ffffff;
-    }
-    .compact-scroll::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    .compact-scroll::-webkit-scrollbar-thumb {
-      background: #a1a1aa;
-      border-radius: 4px;
-    }
-  </style>
+:root{--blue950:#0b1f3a;--blue900:#12345b;--blue700:#1d5f9e;--blue100:#eaf3fb;--blue50:#f6faff;--line:#b8cbe0;--text:#172033;--red:#c62828;--redbg:#fff1f1;--green:#137333;--greenbg:#edf8f0}
+*{border-radius:0!important}
+body{background:#f6faff;color:var(--text);font-family:'Noto Sans TC','DM Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header,section>div,.sharp-card{box-shadow:none!important}
+.sharp-card{background:#fff;border:1px solid var(--line)!important}
+.sharp-button{box-shadow:none!important;border:1px solid var(--blue700)!important;transition:background-color .12s ease,color .12s ease,border-color .12s ease}
+.sharp-button:active{transform:none!important}
+.active-tab,.sub-btn-light.active{background:var(--blue900)!important;color:#fff!important;border-color:var(--blue900)!important;font-weight:900}
+.compact-scroll::-webkit-scrollbar{width:6px;height:6px}.compact-scroll::-webkit-scrollbar-thumb{background:#9bb4cf;border-radius:0!important}
+.bg-amber-50,.bg-amber-100,.bg-amber-200,.bg-amber-300,.bg-amber-400,.bg-amber-500{background-color:var(--blue100)!important}
+.text-amber-600,.text-amber-700,.text-amber-800,.text-amber-900,.text-amber-950{color:var(--blue900)!important}
+.border-amber-200,.border-amber-300,.border-amber-400{border-color:var(--line)!important}
+.hover\:bg-amber-100:hover,.hover\:bg-amber-200:hover,.hover\:bg-amber-500:hover{background-color:#d9eafb!important}
+.border-zinc-950,.border-zinc-900{border-color:var(--line)!important}.bg-zinc-50{background-color:var(--blue50)!important}
+.bg-rose-50,.bg-rose-100,.bg-rose-200{background-color:var(--redbg)!important}.bg-rose-500,.bg-rose-600{background-color:var(--red)!important}
+.text-rose-600,.text-rose-950{color:var(--red)!important}.border-rose-200,.border-rose-400,.border-rose-600{border-color:var(--red)!important}
+.bg-emerald-200,.bg-emerald-400,.bg-emerald-500{background-color:var(--greenbg)!important}.text-emerald-700,.text-emerald-950{color:var(--green)!important}
+.border-emerald-400,.border-emerald-950{border-color:var(--green)!important}
+.status-unmade{color:var(--red);background:var(--redbg);border:1px solid var(--red)}.status-made{color:var(--green);background:var(--greenbg);border:1px solid var(--green)}
+</style>
 </head>
 <body class="p-3 sm:p-6 min-h-screen flex flex-col font-medium">
 
   <header class="flex flex-col md:flex-row justify-between items-start md:items-center border-b-4 border-zinc-900 pb-4 mb-6 gap-4 bg-white p-4 rounded-xl sharp-card">
     <div class="flex items-center gap-3">
-      <span class="text-4xl">🍹</span>
+      
       <div>
         <h1 class="text-2xl sm:text-3xl font-black text-zinc-950 tracking-wider flex items-center gap-2">
           SEE YA BAR
-          <span class="text-xs sm:text-sm font-bold text-amber-900 bg-amber-200 border-2 border-zinc-950 px-3 py-0.5 rounded-full">高對比櫃檯版 v8.0</span>
+          <span class="text-xs sm:text-sm font-bold text-amber-900 bg-amber-200 border-2 border-zinc-950 px-3 py-0.5 rounded-full">店務系統</span>
         </h1>
         <p class="text-xs sm:text-sm font-bold text-zinc-600">seeya店務專用</p>
       </div>
@@ -97,7 +71,7 @@
 
     <!-- KDS 桌號動態容器 -->
     <div id="kds-grouped-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      <div class="col-span-full py-20 text-center text-zinc-500 font-bold text-base bg-white rounded-2xl border-2 border-zinc-900 border-dashed">
+      <div class="col-span-full py-20 text-center text-zinc-500 font-bold text-base bg-white rounded-2xl border-2 border-zinc-900 border-solid">
         正在連線至系統載入吧台數據...
       </div>
     </div>
@@ -110,7 +84,7 @@
       <div class="bg-white p-5 rounded-2xl border-2 border-zinc-950 sharp-card">
         <h2 class="text-base font-black text-zinc-950 mb-3 flex justify-between items-center">
           <span>選擇控制桌號</span>
-          <span class="text-xs font-bold text-rose-600">🔴 紅色代表有已出單未結項目</span>
+          <span class="text-xs font-bold text-rose-600">紅色：尚有未出單｜綠色：已有可結帳品項</span>
         </h2>
         <div id="table-buttons-grid" class="grid grid-cols-2 gap-2.5"></div>
       </div>
@@ -373,21 +347,16 @@
     }
 
     function updateTableStatusBadges() {
-      officialTableNames.forEach(t => {
-        const btn = document.getElementById(`btn-table-${t}`);
-        if (!btn) return;
-
-        const isOptimisticPaid = optimisticPaidTables[t];
-        const hasUnpaidAndCooked = allOrders.some(o => o && o.table === t && o.status === "未結帳" && o.cook === "已出單");
-        let colSpan = (t === "圓桌" || t === "包廂") ? "col-span-2" : "col-span-1";
-
-        if (t === activeTable) {
-          btn.className = `${colSpan} py-3 text-base font-black rounded-xl border-2 border-zinc-950 bg-amber-400 text-zinc-950 shadow-md transition sharp-button`;
-        } else if (hasUnpaidAndCooked && !isOptimisticPaid) {
-          btn.className = `${colSpan} py-3 text-base font-black rounded-xl border-2 border-rose-600 bg-rose-500 text-white animate-pulse transition sharp-button`;
-        } else {
-          btn.className = `${colSpan} py-3 text-base font-black rounded-xl border-2 border-zinc-900 bg-white text-zinc-800 hover:bg-zinc-100 transition sharp-button`;
-        }
+      officialTableNames.forEach(t=>{
+        const btn=document.getElementById(`btn-table-${t}`); if(!btn)return;
+        const unmade=allOrders.some(o=>o&&o.table===t&&o.status==="未結帳"&&o.cook==="未出單");
+        const cooked=allOrders.some(o=>o&&o.table===t&&o.status==="未結帳"&&o.cook==="已出單");
+        const span=(t==="圓桌"||t==="包廂")?"col-span-2":"col-span-1";
+        const base=`${span} py-3 text-base font-black border sharp-button`;
+        if(t===activeTable)btn.className=`${base} bg-blue-900 text-white border-blue-900`;
+        else if(unmade)btn.className=`${base} bg-red-50 text-red-700 border-red-600`;
+        else if(cooked)btn.className=`${base} bg-green-50 text-green-800 border-green-700`;
+        else btn.className=`${base} bg-white text-zinc-800 border-slate-300`;
       });
     }
 
@@ -399,103 +368,40 @@
 
     function renderTableBill(table) {
       document.getElementById('current-selected-table').textContent = `${table} 桌`;
-      const billItemsContainer = document.getElementById('table-bill-items');
-      const actionZone = document.getElementById('action-buttons-zone');
-      const timeLog = document.getElementById('time-log-display');
+      const box=document.getElementById('table-bill-items'), action=document.getElementById('action-buttons-zone'), timeLog=document.getElementById('time-log-display'), badge=document.getElementById('billing-status-badge');
+      const paid=optimisticPaidTables[table];
+      const rows=paid?[]:allOrders.filter(o=>o&&o.table===table&&o.status==="未結帳");
+      const cooked=rows.filter(o=>o.cook==="已出單"), making=rows.filter(o=>o.cook==="未出單");
 
-      const isOptimisticPaid = optimisticPaidTables[table];
-      const activeTableRows = isOptimisticPaid ? [] : allOrders.filter(o => o && o.table === table && o.status === "未結帳");
-
-      const unpaidAndCookedRows = activeTableRows.filter(o => o.cook === "已出單");
-      const makingCount = activeTableRows.filter(o => o.cook === "未出單").length;
-
-      if (isOptimisticPaid) {
-        let snapshot = optimisticPaidTables[table];
-        let htmlContent = `<div class="opacity-60 space-y-2">`;
-        snapshot.items.forEach(itemText => {
-          htmlContent += `
-            <div class="flex justify-between items-center bg-zinc-100 p-3 rounded-xl border border-zinc-300">
-              <p class="text-zinc-600 font-bold line-through">${itemText} (已結清)</p>
-              <span class="font-mono text-zinc-500 font-bold">NT$ --</span>
-            </div>`;
-        });
-        htmlContent += `</div>`;
-
-        billItemsContainer.innerHTML = htmlContent;
-        document.getElementById('table-bill-total').textContent = `NT$ ${snapshot.total.toLocaleString()}`;
-        document.getElementById('billing-status-badge').className = "text-xs sm:text-sm px-3 py-1 rounded-full bg-emerald-200 text-emerald-950 font-black border border-emerald-400";
-
-        let badgeText = "已結清(" + snapshot.payMethod + ")";
-        if (snapshot.bankLast5) badgeText += "[" + snapshot.bankLast5 + "]";
-        document.getElementById('billing-status-badge').textContent = badgeText;
-
-        actionZone.innerHTML = `
-          <button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-amber-400 hover:bg-amber-500 text-zinc-950 font-black rounded-xl transition text-base tracking-widest sharp-button">
-            🔄 下一組客人（重設空桌）
-          </button>
-        `;
-        timeLog.textContent = `⏱ 結帳時間紀錄：${snapshot.payTime || '剛剛完成'}`;
-        return;
+      if(paid){
+        box.innerHTML=`<div class="border border-green-700"><div class="bg-green-50 text-green-800 px-4 py-2 font-black border-b border-green-700">已結帳</div>${paid.items.map(x=>`<div class="p-3 border-b border-slate-200 last:border-b-0 line-through">${x}</div>`).join('')}</div>`;
+        document.getElementById('table-bill-total').textContent=`NT$ ${paid.total.toLocaleString()}`;
+        badge.className="text-xs sm:text-sm px-3 py-1 font-black status-made"; badge.textContent=`已結清（${paid.payMethod}）`;
+        action.innerHTML=`<button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black sharp-button">下一組客人（重設空桌）</button>`;
+        timeLog.textContent=`結帳時間：${paid.payTime||'剛剛完成'}`; return;
+      }
+      if(!rows.length){
+        box.innerHTML='<p class="text-zinc-500 font-bold text-center py-20">該桌目前無任何未結帳單。</p>';
+        document.getElementById('table-bill-total').textContent="NT$ 0"; badge.textContent="無開單";
+        action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black border border-zinc-300">目前無可結帳品項</button>'; timeLog.textContent=""; return;
       }
 
-      if (activeTableRows.length === 0) {
-        billItemsContainer.innerHTML = `<p class="text-zinc-400 font-bold italic text-center py-20 text-base">該桌目前無任何未結帳單。</p>`;
-        document.getElementById('table-bill-total').textContent = "NT$ 0";
-        document.getElementById('billing-status-badge').className = "text-xs sm:text-sm px-3 py-1 rounded-full bg-zinc-200 text-zinc-600 font-bold";
-        document.getElementById('billing-status-badge').textContent = "無開單";
-        actionZone.innerHTML = `<button disabled class="w-full py-4 bg-zinc-200 text-zinc-400 font-black rounded-xl cursor-not-allowed text-base border-2 border-zinc-300">請先選取有消費的桌號</button>`;
-        timeLog.textContent = "";
-        return;
+      let total=0, out='';
+      if(cooked.length){
+        out+='<div class="border border-green-700"><div class="px-4 py-2 font-black text-green-800 bg-green-50 border-b border-green-700">已出單｜可結帳</div>';
+        cooked.forEach(o=>{const p=parseInt(String(o.total??0).replace(/[^0-9]/g,''))||0;total+=p;out+=`<div class="flex justify-between items-center bg-white px-4 py-3 border-b border-green-200 last:border-b-0"><div><p class="font-black">${o.item||"未知品項"}</p><p class="text-xs text-green-700 font-black">已出單</p></div><span class="font-mono font-black">NT$ ${p}</span></div>`}); out+='</div>';
       }
-
-      if (unpaidAndCookedRows.length > 0) {
-        let totalSum = 0;
-        let htmlContent = `<div class="space-y-2">`;
-
-        unpaidAndCookedRows.forEach(o => {
-          let price = parseInt(String(o.total ?? 0).replace(/[^0-9]/g, '')) || 0;
-          totalSum += price;
-          htmlContent += `
-            <div class="flex justify-between items-center bg-zinc-50 p-3 rounded-xl border-2 border-zinc-900">
-              <div>
-                <p class="font-black text-zinc-950 text-base sm:text-lg">${o.item || "未知品項"}</p>
-                <p class="text-xs font-bold text-zinc-500">點單時間: ${o.time ? (o.time.includes(' ') ? o.time.split(' ')[1] : o.time) : "未知"} <span class="text-emerald-700 font-black ml-1">✓已出單</span></p>
-              </div>
-              <span class="font-mono text-zinc-950 font-black text-lg">NT$ ${price}</span>
-            </div>`;
-        });
-
-        if (makingCount > 0) {
-          htmlContent += `<p class="text-xs font-black text-amber-800 italic text-center pt-2">⚠️ 提示：吧台尚有 ${makingCount} 筆餐點製作中（${makingItemsListText}），尚未出單不計入此帳單。</p>`;
-        }
-        htmlContent += `</div>`;
-
-        billItemsContainer.innerHTML = htmlContent;
-        document.getElementById('table-bill-total').textContent = `NT$ ${totalSum.toLocaleString()}`;
-        document.getElementById('billing-status-badge').className = "text-xs sm:text-sm px-3 py-1 rounded-full bg-amber-200 text-amber-950 font-black border border-amber-400";
-        document.getElementById('billing-status-badge').textContent = "有酒水已出單";
-
-        const rowIndices = unpaidAndCookedRows.map(o => o.row).join(',');
-        actionZone.innerHTML = `
-          <div class="grid grid-cols-2 gap-3">
-            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '現金')" class="w-full py-4 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 font-black rounded-xl transition text-base sharp-button">💵 現金結帳</button>
-            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '銀行轉帳')" class="w-full py-4 bg-sky-400 hover:bg-sky-500 text-zinc-950 font-black rounded-xl transition text-base sharp-button">🏦 銀行轉帳</button>
-          </div>
-        `;
-        timeLog.textContent = "";
-
-      } else if (makingCount > 0) {
-        billItemsContainer.innerHTML = `
-          <div class="py-16 text-center space-y-2">
-            <p class="text-amber-800 font-black text-base">餐點製作中，尚未出單</p>
-            <p class="text-xs sm:text-sm font-bold text-zinc-500 max-w-xs mx-auto">請先至「出單分桌總覽」按 ✓ 出單，品項才會流進結帳明細計算金額</p>
-          </div>`;
-        document.getElementById('table-bill-total').textContent = "NT$ 0";
-        document.getElementById('billing-status-badge').className = "text-xs sm:text-sm px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-black";
-        document.getElementById('billing-status-badge').textContent = "等待吧台出單";
-        actionZone.innerHTML = `<button disabled class="w-full py-4 bg-zinc-200 text-zinc-400 font-black rounded-xl cursor-not-allowed text-base border-2 border-zinc-300">等待出單後解鎖結帳</button>`;
-        timeLog.textContent = "";
+      if(making.length){
+        out+='<div class="mt-4 border border-red-600"><div class="px-4 py-2 font-black text-red-700 bg-red-50 border-b border-red-600">尚未出單｜不計入本次帳單</div>';
+        out+=making.map(o=>`<div class="flex justify-between items-center bg-white px-4 py-3 border-b border-red-200 last:border-b-0"><div><p class="font-black">${o.item||"未知品項"}</p><p class="text-xs text-red-700 font-black">製作中</p></div><span class="text-red-700 font-black">未出單</span></div>`).join(''); out+='</div>';
       }
+      box.innerHTML=out; document.getElementById('table-bill-total').textContent=`NT$ ${total.toLocaleString()}`;
+      if(cooked.length&&making.length){badge.className="text-xs sm:text-sm px-3 py-1 font-black status-unmade";badge.textContent=`可結帳 ${cooked.length} 筆｜另有 ${making.length} 筆未出單`}
+      else if(cooked.length){badge.className="text-xs sm:text-sm px-3 py-1 font-black status-made";badge.textContent="可結帳"}
+      else{badge.className="text-xs sm:text-sm px-3 py-1 font-black status-unmade";badge.textContent="等待出單"}
+      if(cooked.length){const ids=cooked.map(o=>o.row).join(',');action.innerHTML=`<div class="grid grid-cols-2 gap-3"><button onclick="batchPay('${ids}','${table}',${total},'現金')" class="w-full py-4 bg-blue-900 text-white font-black sharp-button">現金結帳</button><button onclick="batchPay('${ids}','${table}',${total},'銀行轉帳')" class="w-full py-4 bg-blue-700 text-white font-black sharp-button">銀行轉帳</button></div>`}
+      else action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black border border-zinc-300">等待出單後解鎖結帳</button>';
+      timeLog.textContent="";
     }
 
     async function batchPay(rowStr, table, totalAmount, payMethod) {
@@ -667,6 +573,14 @@
       renderCounterMenu();
     }
 
+    function addCounterCartWithNote(name, price, inputId) {
+      if(!counterChosenTable){alert("請先選擇桌號");return;}
+      const input=document.getElementById(inputId);
+      const note=input?input.value.trim():"";
+      addCounterCart(name,price,"drink",note);
+      if(input)input.value="";
+    }
+
     function addCounterCart(name, price, type, note) {
       if (!counterChosenTable) {
         alert("⚠️ 請先在上方點選代點桌號！");
@@ -699,7 +613,7 @@
       }
 
       container.innerHTML = counterCart.map((item, idx) => {
-        let noteBadge = item.note === "去冰" ? `<span class="text-sky-950 font-black text-xs bg-sky-200 px-2 py-0.5 rounded border border-sky-400">去冰</span>` : '';
+        let noteBadge = item.note ? `<span class="text-blue-900 font-bold text-xs border border-blue-300 px-2 py-0.5">${item.note}</span>` : '';
         return `
           <div class="bg-zinc-50 border-2 border-zinc-900 p-3 rounded-xl flex justify-between items-center text-sm sm:text-base">
             <div class="min-w-0 flex-1 pr-2">
@@ -751,7 +665,7 @@
             name: item.name,
             price: item.price,
             quantity: 1,
-            note: item.note === "去冰" ? "去冰" : "正常"
+            note: (item.note || "").trim()
           });
         }
       });
