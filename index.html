@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>See Ya Bar - 櫃檯接單與後結帳系統 </title>
+  <title>See Ya Bar - 櫃檯系統 </title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;900&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
@@ -63,9 +63,9 @@
       <div>
         <h1 class="text-2xl sm:text-3xl font-black text-zinc-950 tracking-wider flex items-center gap-2">
           SEE YA BAR
-          <span class="text-xs sm:text-sm font-bold text-amber-900 bg-amber-200 border-2 border-zinc-950 px-3 py-0.5 rounded-full">高對比櫃檯版 v8.1</span>
+          <span class="text-xs sm:text-sm font-bold text-amber-900 bg-amber-200 border-2 border-zinc-950 px-3 py-0.5 rounded-full">高對比櫃檯版 v8.0</span>
         </h1>
-        <p class="text-xs sm:text-sm font-bold text-zinc-600">櫃檯接單與出單控盤</p>
+        <p class="text-xs sm:text-sm font-bold text-zinc-600">seeya店務專用</p>
       </div>
     </div>
     
@@ -78,22 +78,24 @@
         結帳 (POS)
       </button>
       <button id="tab-counter-order" class="py-2.5 px-4 rounded-lg border-2 border-transparent text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition whitespace-nowrap font-black" onclick="switchTab('counter-order')">
-        櫃檯點餐
+        櫃檯代點
       </button>
     </nav>
   </header>
 
+  <!-- -->
   <section id="panel-kds" class="block space-y-4">
     <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl border-2 border-zinc-950 sharp-card gap-2">
       <div class="flex items-center gap-3">
         <h2 class="text-base sm:text-lg font-black text-zinc-950">各桌未出單現況（依桌號分區展示）</h2>
-        <span class="text-xs sm:text-sm font-bold text-zinc-600">（製作完成請點擊該品項右側勾勾 ✓ 出單）</span>
+        <span class="text-xs sm:text-sm font-bold text-zinc-600">（製作完成請打勾出單）</span>
       </div>
       <span id="kds-total-summary" class="text-sm sm:text-base bg-amber-300 text-zinc-950 font-black px-4 py-1 rounded-full border-2 border-zinc-950">
         總計 0 份未出餐
       </span>
     </div>
 
+    <!-- KDS 桌號動態容器 -->
     <div id="kds-grouped-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       <div class="col-span-full py-20 text-center text-zinc-500 font-bold text-base bg-white rounded-2xl border-2 border-zinc-900 border-dashed">
         正在連線至系統載入吧台數據...
@@ -101,7 +103,9 @@
     </div>
   </section>
 
+  <!-- -->
   <section id="panel-pos" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- 左側：桌號選擇牆 -->
     <div class="lg:col-span-1 space-y-4">
       <div class="bg-white p-5 rounded-2xl border-2 border-zinc-950 sharp-card">
         <h2 class="text-base font-black text-zinc-950 mb-3 flex justify-between items-center">
@@ -112,6 +116,7 @@
       </div>
     </div>
 
+    <!-- 右側：帳單與結帳面板 -->
     <div class="lg:col-span-2 bg-white rounded-2xl p-6 border-2 border-zinc-950 sharp-card flex flex-col justify-between min-h-[500px]">
       <div>
         <div class="flex justify-between items-center border-b-2 border-zinc-900 pb-3 mb-4">
@@ -138,10 +143,13 @@
     </div>
   </section>
 
+  <!-- -->
   <section id="panel-counter-order" class="hidden space-y-5">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
+      <!-- 左側：桌號選擇 + 菜單 -->
       <div class="lg:col-span-2 space-y-4">
+        <!-- 桌號選擇區 -->
         <div id="counter-table-selector" class="bg-white p-4 rounded-xl border-2 border-zinc-950 sharp-card space-y-2">
           <div class="flex justify-between items-center">
             <span class="text-sm font-black text-zinc-950 tracking-wider">第一步：點選代點桌號</span>
@@ -150,11 +158,14 @@
           <div id="counter-tables-grid" class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-sm"></div>
         </div>
 
+        <!-- 分類選擇 -->
         <div id="counter-category-filters" class="flex gap-2 overflow-x-auto pb-1 compact-scroll"></div>
 
+        <!-- 菜單列表 (極簡大字無介紹) -->
         <div id="counter-menu-items" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[520px] overflow-y-auto pr-1 compact-scroll"></div>
       </div>
 
+      <!-- 右側：點餐明細購物車 -->
       <div class="bg-white rounded-2xl p-5 border-2 border-zinc-950 sharp-card flex flex-col justify-between min-h-[480px]">
         <div>
           <div class="flex justify-between items-center border-b-2 border-zinc-900 pb-3 mb-3">
@@ -176,7 +187,7 @@
             <span id="counter-cart-total" class="font-mono text-2xl text-amber-700">NT$ 0</span>
           </div>
           <button id="counter-submit-btn" onclick="submitCounterOrder()" class="w-full bg-amber-400 hover:bg-amber-500 text-zinc-950 font-black py-4 rounded-xl transition sharp-button text-base sm:text-lg tracking-wider">
-            🚀 送出點餐至吧台與 Google Sheet
+            送出點餐
           </button>
           <p id="counter-status-msg" class="text-sm text-center hidden font-black p-2 rounded-lg"></p>
         </div>
@@ -189,12 +200,14 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbzy6YYrlhWaRMBy-MtSk_8pjjjcFexXMtARGHNHELPxqO0Zi1IpBCF-rstrGlYgvco/exec";
     const BACKEND_URL = API_URL;
 
+    // 官方桌號清單
     const officialTableNames = [
       "A1", "A2", "A3", "A4", "A5", "A6",
       "吧台1", "吧台2", "吧台3", "吧台4", "吧台5", "吧台6",
       "圓桌", "包廂"
     ];
 
+    // 櫃檯專用極簡菜單庫 (純品名與價格，高對比大字模式)
     const MENU = {
       alcohol: {
         "招牌特調 Signature": [
@@ -249,11 +262,13 @@
       }
     };
 
+    // 全局狀態
     let allOrders = [];
     let activeTable = "";
     let isFetching = false;
     let optimisticPaidTables = {};
 
+    // 櫃檯代點狀態
     let counterChosenTable = "";
     let counterCart = [];
     let counterMainCategory = 'alcohol';
@@ -283,11 +298,12 @@
       if (unfulfilled.length === 0) {
         container.innerHTML = `
           <div class="col-span-full py-20 text-center text-zinc-600 font-black text-lg bg-white rounded-2xl border-2 border-zinc-950 sharp-card">
-            🎉 吧台目前沒有任何待出單餐點！全部出單完畢！
+            目前無待出單餐點
           </div>`;
         return;
       }
 
+      // Group By 桌號
       const groupedByTable = {};
       unfulfilled.forEach(order => {
         const t = order.table.trim();
@@ -302,6 +318,7 @@
         html += `
         <div class="sharp-card rounded-2xl p-5 flex flex-col justify-between bg-white border-2 border-zinc-950">
           <div>
+            <!-- 桌號標題 -->
             <div class="flex justify-between items-center border-b-2 border-zinc-900 pb-3 mb-3">
               <div class="flex items-center gap-2">
                 <span class="bg-amber-400 text-zinc-950 font-black text-base sm:text-lg px-3 py-1 rounded-lg border border-zinc-950 tracking-wider">${tableName} 桌</span>
@@ -310,6 +327,7 @@
               <span class="text-xs font-bold text-zinc-500">製作中</span>
             </div>
 
+            <!-- 品項清單 -->
             <div class="space-y-2.5">
               ${ordersForThisTable.map(item => {
                 let displayTime = "剛才";
@@ -346,7 +364,7 @@
       grid.innerHTML = officialTableNames.map(t => {
         let colSpan = (t === "圓桌" || t === "包廂") ? "col-span-2" : "col-span-1";
         return `
-          <button id="btn-table-\({t}" onclick="selectTable('\){t}')" 
+          <button id="btn-table-${t}" onclick="selectTable('${t}')" 
                   class="${colSpan} py-3 text-base font-black rounded-xl border-2 border-zinc-900 bg-zinc-50 text-zinc-700 hover:bg-amber-100 hover:text-zinc-950 transition sharp-button">
             ${t}
           </button>
@@ -389,10 +407,7 @@
       const activeTableRows = isOptimisticPaid ? [] : allOrders.filter(o => o && o.table === table && o.status === "未結帳");
 
       const unpaidAndCookedRows = activeTableRows.filter(o => o.cook === "已出單");
-      
-      const unfulfilledRows = activeTableRows.filter(o => o.cook === "未出單");
-      const makingCount = unfulfilledRows.length;
-      const makingItemsListText = unfulfilledRows.map(o => o.item || "餐點").join('、');
+      const makingCount = activeTableRows.filter(o => o.cook === "未出單").length;
 
       if (isOptimisticPaid) {
         let snapshot = optimisticPaidTables[table];
@@ -424,7 +439,7 @@
       }
 
       if (activeTableRows.length === 0) {
-        billItemsContainer.innerHTML = `<p class="text-zinc-400 font-bold italic text-center py-20 text-base">該桌目前是乾淨空桌，無任何未結帳單。🧹</p>`;
+        billItemsContainer.innerHTML = `<p class="text-zinc-400 font-bold italic text-center py-20 text-base">該桌目前無任何未結帳單。</p>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
         document.getElementById('billing-status-badge').className = "text-xs sm:text-sm px-3 py-1 rounded-full bg-zinc-200 text-zinc-600 font-bold";
         document.getElementById('billing-status-badge').textContent = "無開單";
@@ -438,7 +453,7 @@
         let htmlContent = `<div class="space-y-2">`;
 
         unpaidAndCookedRows.forEach(o => {
-          let price = parseInt(o.total.replace(/[^0-9]/g, '')) || 0;
+          let price = parseInt(String(o.total ?? 0).replace(/[^0-9]/g, '')) || 0;
           totalSum += price;
           htmlContent += `
             <div class="flex justify-between items-center bg-zinc-50 p-3 rounded-xl border-2 border-zinc-900">
@@ -451,7 +466,7 @@
         });
 
         if (makingCount > 0) {
-          htmlContent += `<p class="text-xs font-black text-amber-800 italic text-center pt-2">⚠️ 提示：吧台尚有 \({makingCount} 筆餐點製作中（\){makingItemsListText}），尚未出單不計入此帳單。</p>`;
+          htmlContent += `<p class="text-xs font-black text-amber-800 italic text-center pt-2">⚠️ 提示：吧台尚有 ${makingCount} 筆餐點製作中（${makingItemsListText}），尚未出單不計入此帳單。</p>`;
         }
         htmlContent += `</div>`;
 
@@ -463,8 +478,8 @@
         const rowIndices = unpaidAndCookedRows.map(o => o.row).join(',');
         actionZone.innerHTML = `
           <div class="grid grid-cols-2 gap-3">
-            <button onclick="batchPay('\({rowIndices}', '\){table}', ${totalSum}, '現金')" class="w-full py-4 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 font-black rounded-xl transition text-base sharp-button">💵 現金結帳</button>
-            <button onclick="batchPay('\({rowIndices}', '\){table}', ${totalSum}, '銀行轉帳')" class="w-full py-4 bg-sky-400 hover:bg-sky-500 text-zinc-950 font-black rounded-xl transition text-base sharp-button">🏦 銀行轉帳</button>
+            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '現金')" class="w-full py-4 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 font-black rounded-xl transition text-base sharp-button">💵 現金結帳</button>
+            <button onclick="batchPay('${rowIndices}', '${table}', ${totalSum}, '銀行轉帳')" class="w-full py-4 bg-sky-400 hover:bg-sky-500 text-zinc-950 font-black rounded-xl transition text-base sharp-button">🏦 銀行轉帳</button>
           </div>
         `;
         timeLog.textContent = "";
@@ -472,7 +487,7 @@
       } else if (makingCount > 0) {
         billItemsContainer.innerHTML = `
           <div class="py-16 text-center space-y-2">
-            <p class="text-amber-800 font-black text-base">⚠️ 提示：吧台尚有 \({makingCount} 筆餐點製作中（\){makingItemsListText}），尚未出單不計入此帳單。</p>
+            <p class="text-amber-800 font-black text-base">餐點製作中，尚未出單</p>
             <p class="text-xs sm:text-sm font-bold text-zinc-500 max-w-xs mx-auto">請先至「出單分桌總覽」按 ✓ 出單，品項才會流進結帳明細計算金額</p>
           </div>`;
         document.getElementById('table-bill-total').textContent = "NT$ 0";
@@ -560,7 +575,7 @@
     function initCounterTableGrid() {
       const grid = document.getElementById('counter-tables-grid');
       grid.innerHTML = officialTableNames.map(t => `
-        <button id="counter-btn-\({t}" onclick="selectCounterTable('\){t}')" 
+        <button id="counter-btn-${t}" onclick="selectCounterTable('${t}')" 
                 class="py-3 font-black text-sm sm:text-base rounded-xl border-2 border-zinc-900 bg-white text-zinc-900 hover:bg-amber-200 sharp-button">
           ${t}
         </button>
@@ -588,32 +603,50 @@
       initCounterTableGrid();
 
       const catFilters = document.getElementById('counter-category-filters');
-      catFilters.innerHTML = `
-        <div class="flex gap-3 mb-2 w-full">
+      const subCategories = Object.keys(MENU[counterMainCategory]);
+
+      // 防止切換主分類後仍停留在不存在的子分類
+      if (!MENU[counterMainCategory][counterSubCategory]) {
+        counterSubCategory = subCategories[0];
+      }
+
+      const mainButtons = `
+        <div class="flex gap-3 w-full min-w-max">
           <button onclick="setCounterMainCat('alcohol')" class="sub-btn-light px-4 py-2 rounded-xl text-sm sm:text-base font-black border-2 border-zinc-900 sharp-button ${counterMainCategory==='alcohol'?'active':''}">有酒精</button>
           <button onclick="setCounterMainCat('nonalcohol')" class="sub-btn-light px-4 py-2 rounded-xl text-sm sm:text-base font-black border-2 border-zinc-900 sharp-button ${counterMainCategory==='nonalcohol'?'active':''}">無酒精</button>
           <button onclick="setCounterMainCat('food')" class="sub-btn-light px-4 py-2 rounded-xl text-sm sm:text-base font-black border-2 border-zinc-900 sharp-button ${counterMainCategory==='food'?'active':''}">隱藏版美食</button>
-        </div>
-      `;
+        </div>`;
+
+      const subButtons = subCategories.length > 1 ? `
+        <div class="flex gap-2 w-full min-w-max pt-2">
+          ${subCategories.map(sub => `
+            <button onclick="setCounterSubCat('${sub.replace(/'/g, "\\'")}')"
+                    class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black border-2 border-zinc-900 ${counterSubCategory===sub?'bg-amber-300 text-zinc-950':'bg-white text-zinc-700 hover:bg-zinc-100'}">
+              ${sub}
+            </button>
+          `).join('')}
+        </div>` : '';
+
+      catFilters.innerHTML = `<div class="space-y-1">${mainButtons}${subButtons}</div>`;
 
       const menuItemsContainer = document.getElementById('counter-menu-items');
-      let itemsList = MENU[counterMainCategory][counterSubCategory] || [];
+      const itemsList = MENU[counterMainCategory][counterSubCategory] || [];
 
       menuItemsContainer.innerHTML = itemsList.map((item, index) => {
-        const inputId = `counter-note-input-\({counterMainCategory}-\){index}`;
+        const inputId = `counter-note-input-${counterMainCategory}-${index}`;
         const escapedName = item.name.replace(/'/g, "\\'");
 
         return `
           <div class="bg-white border-2 border-zinc-950 rounded-2xl p-4 flex flex-col justify-between gap-3 sharp-card">
-            <div class="flex justify-between items-start">
+            <div class="flex justify-between items-start gap-3">
               <h4 class="font-black text-zinc-950 text-base sm:text-lg">${item.name}</h4>
               <p class="text-zinc-950 font-black text-base font-mono flex-shrink-0">NT$ ${item.price}</p>
             </div>
-            
+
             <div class="flex gap-2 items-center">
-              <input id="${inputId}" type="text" placeholder="文字備註（可不填）" 
+              <input id="${inputId}" type="text" placeholder="文字備註（可不填）"
                      class="w-full bg-zinc-50 border-2 border-zinc-900 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-bold focus:outline-none focus:bg-amber-50">
-              <button onclick="addCounterCartWithNote('\({escapedName}',\){item.price}, '${inputId}')" 
+              <button onclick="addCounterCartWithNote('${escapedName}', ${item.price}, '${inputId}')"
                       class="bg-amber-400 hover:bg-amber-500 text-zinc-950 px-4 py-2 rounded-xl text-sm sm:text-base font-black border-2 border-zinc-950 sharp-button whitespace-nowrap">
                 ＋加入
               </button>
@@ -629,23 +662,23 @@
       renderCounterMenu();
     }
 
-    function addCounterCartWithNote(name, price, inputId) {
+    function setCounterSubCat(sub) {
+      counterSubCategory = sub;
+      renderCounterMenu();
+    }
+
+    function addCounterCart(name, price, type, note) {
       if (!counterChosenTable) {
         alert("⚠️ 請先在上方點選代點桌號！");
         return;
       }
 
-      const inputEl = document.getElementById(inputId);
-      const noteText = inputEl ? inputEl.value.trim() : "";
-
-      const existing = counterCart.find(i => i.name === name && i.note === noteText);
+      const existing = counterCart.find(i => i.name === name && i.note === note);
       if (existing) {
         existing.qty++;
       } else {
-        counterCart.push({ name, price, qty: 1, note: noteText });
+        counterCart.push({ name, price, qty: 1, note, type });
       }
-
-      if (inputEl) inputEl.value = "";
       renderCounterCart();
     }
 
@@ -666,11 +699,11 @@
       }
 
       container.innerHTML = counterCart.map((item, idx) => {
-        let noteBadge = item.note ? `<span class="text-amber-950 font-bold text-xs bg-amber-200 px-2 py-0.5 rounded border border-amber-400 ml-1">備註: ${item.note}</span>` : '';
+        let noteBadge = item.note === "去冰" ? `<span class="text-sky-950 font-black text-xs bg-sky-200 px-2 py-0.5 rounded border border-sky-400">去冰</span>` : '';
         return `
           <div class="bg-zinc-50 border-2 border-zinc-900 p-3 rounded-xl flex justify-between items-center text-sm sm:text-base">
             <div class="min-w-0 flex-1 pr-2">
-              <p class="font-black text-zinc-950 truncate">\({item.name}\){noteBadge}</p>
+              <p class="font-black text-zinc-950 truncate">${item.name} ${noteBadge}</p>
               <p class="text-zinc-600 font-black font-mono text-xs">NT$ ${item.price}</p>
             </div>
             <div class="flex items-center gap-2">
@@ -718,7 +751,7 @@
             name: item.name,
             price: item.price,
             quantity: 1,
-            note: item.note || "正常"
+            note: item.note === "去冰" ? "去冰" : "正常"
           });
         }
       });
@@ -751,7 +784,7 @@
         msg.className = "text-sm text-center font-black text-rose-950 bg-rose-200 p-2 rounded-lg border border-rose-400 block";
       } finally {
         btn.disabled = false;
-        btn.textContent = "🚀 送出點餐至吧台與 Google Sheet";
+        btn.textContent = "送出點餐";
       }
     }
 
