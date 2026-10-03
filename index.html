@@ -294,7 +294,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
       try{
         const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'cancelAfterCook',row,reason,note})});
         const z=await r.json();
-        if(!z.success||z.cook!=='已取消')throw new Error(z.error||'後端未確認取消');
+        if(!z.success)throw new Error(z.error||'後端取消失敗');
         if(z.cancelTime)o.cancelTime=z.cancelTime;
         await refreshData();
         pendingCancelRows.delete(row);
