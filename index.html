@@ -170,6 +170,21 @@ header,section>div,.sharp-card{box-shadow:none!important}
     </div>
   </section>
 
+
+  <!-- 客人拍照用消費明細：不顯示 POS 操作內容 -->
+  <div id="customer-receipt-overlay" class="hidden fixed inset-0 z-50 bg-white overflow-y-auto">
+    <div class="max-w-3xl mx-auto min-h-screen p-5 sm:p-8">
+      <div class="flex justify-between items-center border-b-4 border-zinc-950 pb-4 mb-6">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-black tracking-wider">SEE YA BAR</h2>
+          <p class="text-sm font-bold text-zinc-500">消費明細</p>
+        </div>
+        <button onclick="closeCustomerReceipt()" class="px-4 py-2 border-2 border-zinc-950 bg-white text-zinc-950 font-black">關閉</button>
+      </div>
+      <div id="customer-receipt-content"></div>
+    </div>
+  </div>
+
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyr1M-r-8t8smmxC6QOQrsQiORp5l5G3NH3_V-zeztm2idhkQHzQ_Is_WhdPKdOTjjZ/exec";
     const BACKEND_URL = API_URL;
@@ -338,6 +353,64 @@ header,section>div,.sharp-card{box-shadow:none!important}
         .replace(/'/g, "&#039;");
     }
 
+    function buildCustomerReceiptGroups(items) {
+      const groups = new Map();
+      (items || []).forEach(item => {
+        const name = cleanItemName(item.name);
+        const price = Number(item.price) || 0;
+        const key = `${name}|||${price}`;
+        if (!groups.has(key)) groups.set(key, { name, price, qty: 0 });
+        groups.get(key).qty++;
+      });
+      return [...groups.values()];
+    }
+
+    function openCustomerReceipt(table) {
+      const paid = optimisticPaidTables[table];
+      if (!paid) return;
+
+      const groups = buildCustomerReceiptGroups(paid.receiptItems || []);
+      const overlay = document.getElementById('customer-receipt-overlay');
+      const content = document.getElementById('customer-receipt-content');
+
+      content.innerHTML = `
+        <div class="mb-5">
+          <p class="text-sm font-bold text-zinc-500">桌號</p>
+          <p class="text-2xl font-black">${escapeHtml(table)}</p>
+        </div>
+
+        <div class="border-2 border-zinc-950">
+          <div class="grid grid-cols-12 gap-2 px-3 py-3 bg-zinc-100 border-b-2 border-zinc-950 text-xs sm:text-sm font-black">
+            <div class="col-span-6">品項名稱</div>
+            <div class="col-span-2 text-center">數量</div>
+            <div class="col-span-2 text-right">單價</div>
+            <div class="col-span-2 text-right">總金額</div>
+          </div>
+          ${groups.map(g => `
+            <div class="grid grid-cols-12 gap-2 px-3 py-4 border-b last:border-b-0 text-sm sm:text-base items-center">
+              <div class="col-span-6 font-black break-words">${escapeHtml(g.name)}</div>
+              <div class="col-span-2 text-center font-black">${g.qty}</div>
+              <div class="col-span-2 text-right font-mono">NT$ ${g.price.toLocaleString()}</div>
+              <div class="col-span-2 text-right font-mono font-black">NT$ ${(g.price * g.qty).toLocaleString()}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="mt-6 border-t-4 border-zinc-950 pt-4 flex justify-between items-end">
+          <span class="text-lg font-black">總金額</span>
+          <span class="text-3xl sm:text-4xl font-black font-mono">NT$ ${Number(paid.total || 0).toLocaleString()}</span>
+        </div>
+      `;
+
+      overlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCustomerReceipt() {
+      document.getElementById('customer-receipt-overlay').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
     function renderKDS() {
       const container = document.getElementById('kds-grouped-container');
       const unfulfilled = allOrders.filter(o =>
@@ -463,7 +536,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
       document.getElementById('current-selected-table').textContent=`${table} 桌`;
       const box=document.getElementById('table-bill-items'),action=document.getElementById('action-buttons-zone'),timeLog=document.getElementById('time-log-display'),badge=document.getElementById('billing-status-badge'),paid=optimisticPaidTables[table];
       const rows=paid?[]:allOrders.filter(o=>o&&o.table===table&&o.status==='未結帳'&&!clearedCancelledRows.has(o.row)),cooked=rows.filter(o=>o.cook==='已出單'),making=rows.filter(o=>o.cook==='未出單'),cancelled=rows.filter(o=>o.cook==='已取消');
-      if(paid){box.innerHTML=`<div class="border border-green-700"><div class="bg-green-50 text-green-800 px-4 py-2 font-black">已結帳</div>${paid.items.map(x=>`<div class="p-3 border-t line-through">${escapeHtml(x)}</div>`).join('')}</div>`;document.getElementById('table-bill-total').textContent=`NT$ ${paid.total.toLocaleString()}`;badge.textContent=`已結清（${paid.payMethod}）`;action.innerHTML=`<button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black">下一組客人（重設空桌）</button>`;timeLog.textContent=`結帳時間：${paid.payTime||'剛剛完成'}`;return;}
+      if(paid){box.innerHTML=`<div class="border border-green-700"><div class="bg-green-50 text-green-800 px-4 py-2 font-black">已結帳</div>${paid.items.map(x=>`<div class="p-3 border-t line-through">${escapeHtml(x)}</div>`).join('')}</div>`;document.getElementById('table-bill-total').textContent=`NT$ ${paid.total.toLocaleString()}`;badge.textContent=`已結清（${paid.payMethod}）`;action.innerHTML=`<div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onclick="openCustomerReceipt('${table}')" class="w-full py-4 bg-white text-blue-900 border-2 border-blue-900 font-black">顯示客人消費明細</button><button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black">下一組客人（重設空桌）</button></div>`;timeLog.textContent=`結帳時間：${paid.payTime||'剛剛完成'}`;return;}
       if(!rows.length){box.innerHTML='<p class="text-zinc-500 font-bold text-center py-20">該桌目前無任何未結帳單。</p>';document.getElementById('table-bill-total').textContent='NT$ 0';badge.textContent='無開單';action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black">目前無可結帳品項</button>';timeLog.textContent='';return;}
       let subtotal=cooked.reduce((s,o)=>s+moneyOf(o),0),out='';
       if(cooked.length){out+='<div class="border border-green-700"><div class="px-4 py-2 font-black text-green-800 bg-green-50">已出單｜可結帳</div>';groupPosRows(cooked).forEach((g,i)=>{const id=`pos-detail-${i}`;out+=`<div class="border-t border-green-200"><div class="flex justify-between items-center px-4 py-3"><div><p class="font-black">${escapeHtml(g.name)} <span class="text-blue-900">×${g.rows.length}</span></p>${g.note?`<p class="text-xs text-red-700 font-black">備註：${escapeHtml(g.note)}</p>`:''}<button onclick="togglePosGroup('${id}')" class="text-xs text-blue-800 underline font-black">查看 ${g.rows.length} 筆原始明細</button></div><span class="font-mono font-black">NT$ ${(g.price*g.rows.length).toLocaleString()}</span></div><div id="${id}" class="hidden bg-slate-50 border-t">${g.rows.map((o,j)=>`<div class="flex justify-between items-center px-4 py-2 border-b"><div class="text-xs"><p class="font-black">第 ${j+1} 筆｜${posTimeLabel(o.time)}</p><p>Sheet row ${o.row}</p></div><div class="flex gap-3 items-center"><span class="font-mono">NT$ ${moneyOf(o).toLocaleString()}</span><button onclick="cancelPosOrder(${o.row})" class="px-3 py-1 border border-red-600 text-red-700 bg-white text-xs font-black">取消此筆</button></div></div>`).join('')}</div></div>`});out+='</div>';}
@@ -490,10 +563,15 @@ header,section>div,.sharp-card{box-shadow:none!important}
 
       const rows = rowStr.split(',').map(r => parseInt(r));
       const itemsSnapshot = [];
+      const receiptItemsSnapshot = [];
 
       allOrders.forEach(o => {
         if (o && rows.includes(o.row)) {
           itemsSnapshot.push(o.item);
+          receiptItemsSnapshot.push({
+            name: cleanItemName(o.item),
+            price: moneyOf(o)
+          });
           o.status = "已結帳";
         }
       });
@@ -509,6 +587,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
       optimisticPaidTables[table] = {
         total: totalAmount,
         items: itemsSnapshot,
+        receiptItems: receiptItemsSnapshot,
         payMethod: payMethod,
         bankLast5: bankLast5,
         payTime: nowFormatted
