@@ -248,6 +248,8 @@ header,section>div,.sharp-card{box-shadow:none!important}
     // POS 已按取消、但後端/下一次 GET 尚未完全同步的列。
     // 在請求完成前強制維持已取消，避免畫面金額從 450 又跳回 600。
     const pendingCancelRows = new Set();
+    // 全部取消後按「翻桌」時，只在前端隱藏該批取消紀錄；Google Sheet 原始紀錄完全保留。
+    const clearedCancelledRows = new Set();
 
     // 櫃檯代點狀態
     let counterChosenTable = "";
@@ -460,7 +462,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
     function renderTableBill(table) {
       document.getElementById('current-selected-table').textContent=`${table} 桌`;
       const box=document.getElementById('table-bill-items'),action=document.getElementById('action-buttons-zone'),timeLog=document.getElementById('time-log-display'),badge=document.getElementById('billing-status-badge'),paid=optimisticPaidTables[table];
-      const rows=paid?[]:allOrders.filter(o=>o&&o.table===table&&o.status==='未結帳'),cooked=rows.filter(o=>o.cook==='已出單'),making=rows.filter(o=>o.cook==='未出單'),cancelled=rows.filter(o=>o.cook==='已取消');
+      const rows=paid?[]:allOrders.filter(o=>o&&o.table===table&&o.status==='未結帳'&&!clearedCancelledRows.has(o.row)),cooked=rows.filter(o=>o.cook==='已出單'),making=rows.filter(o=>o.cook==='未出單'),cancelled=rows.filter(o=>o.cook==='已取消');
       if(paid){box.innerHTML=`<div class="border border-green-700"><div class="bg-green-50 text-green-800 px-4 py-2 font-black">已結帳</div>${paid.items.map(x=>`<div class="p-3 border-t line-through">${escapeHtml(x)}</div>`).join('')}</div>`;document.getElementById('table-bill-total').textContent=`NT$ ${paid.total.toLocaleString()}`;badge.textContent=`已結清（${paid.payMethod}）`;action.innerHTML=`<button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black">下一組客人（重設空桌）</button>`;timeLog.textContent=`結帳時間：${paid.payTime||'剛剛完成'}`;return;}
       if(!rows.length){box.innerHTML='<p class="text-zinc-500 font-bold text-center py-20">該桌目前無任何未結帳單。</p>';document.getElementById('table-bill-total').textContent='NT$ 0';badge.textContent='無開單';action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black">目前無可結帳品項</button>';timeLog.textContent='';return;}
       let subtotal=cooked.reduce((s,o)=>s+moneyOf(o),0),out='';
@@ -468,8 +470,9 @@ header,section>div,.sharp-card{box-shadow:none!important}
       if(cancelled.length){out+='<div class="mt-4 border border-slate-500"><div class="px-4 py-2 font-black bg-slate-100">已取消｜不計入應收</div>'+cancelled.map(o=>`<div class="flex justify-between items-center px-4 py-3 border-t"><div><p class="font-black line-through">${escapeHtml(cleanItemName(o.item))}</p><p class="text-xs text-red-700 font-black">${escapeHtml(o.cancelReason||'已取消')}${o.cancelNote?'｜'+escapeHtml(o.cancelNote):''}</p></div><div class="flex gap-2"><span class="line-through">NT$ ${moneyOf(o).toLocaleString()}</span><button onclick="restorePosCancelled(${o.row})" class="border px-2 text-xs font-black">復原取消</button></div></div>`).join('')+'</div>';}
       if(making.length){out+='<div class="mt-4 border border-red-600"><div class="px-4 py-2 font-black text-red-700 bg-red-50">尚未出單｜不計入本次帳單</div>'+groupPosRows(making).map(g=>`<div class="flex justify-between px-4 py-3 border-t"><p class="font-black">${escapeHtml(g.name)} ×${g.rows.length}</p><span class="text-red-700 font-black">未出單</span></div>`).join('')+'</div>';}
       box.innerHTML=out;const a=getPosAdjustment(table),final=Math.round(subtotal*a.discountRate);document.getElementById('table-bill-total').textContent=`NT$ ${final.toLocaleString()}`;
-      if(cooked.length&&making.length)badge.textContent=`可結帳 ${cooked.length} 筆｜另有 ${making.length} 筆未出單`;else if(cooked.length)badge.textContent='可結帳';else badge.textContent='等待出單';
-      if(cooked.length){const ids=cooked.map(o=>o.row).join(',');action.innerHTML=`<div class="space-y-3">${discountPanelHtml(table,subtotal)}<div class="border p-3"><div class="flex justify-between"><span>有效消費</span><b>NT$ ${subtotal.toLocaleString()}</b></div>${a.discountRate<1?`<div class="flex justify-between text-red-700"><span>整單折扣</span><b>− NT$ ${(subtotal-final).toLocaleString()}</b></div>`:''}<div class="flex justify-between text-lg font-black border-t mt-2 pt-2"><span>實際應收</span><span>NT$ ${final.toLocaleString()}</span></div></div><div class="grid grid-cols-2 gap-3"><button onclick="batchPay('${ids}','${table}',${final},'現金')" class="py-4 bg-blue-900 text-white font-black">現金結帳</button><button onclick="batchPay('${ids}','${table}',${final},'銀行轉帳')" class="py-4 bg-blue-700 text-white font-black">銀行轉帳</button></div></div>`}else action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black">等待出單後解鎖結帳</button>';timeLog.textContent='';
+      const allCancelled=cancelled.length>0&&cooked.length===0&&making.length===0;
+      if(allCancelled)badge.textContent='本桌品項已全部取消';else if(cooked.length&&making.length)badge.textContent=`可結帳 ${cooked.length} 筆｜另有 ${making.length} 筆未出單`;else if(cooked.length)badge.textContent='可結帳';else badge.textContent='等待出單';
+      if(allCancelled){action.innerHTML=`<button onclick="resetCancelledTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black">翻桌（重設空桌）</button>`}else if(cooked.length){const ids=cooked.map(o=>o.row).join(',');action.innerHTML=`<div class="space-y-3">${discountPanelHtml(table,subtotal)}<div class="border p-3"><div class="flex justify-between"><span>有效消費</span><b>NT$ ${subtotal.toLocaleString()}</b></div>${a.discountRate<1?`<div class="flex justify-between text-red-700"><span>整單折扣</span><b>− NT$ ${(subtotal-final).toLocaleString()}</b></div>`:''}<div class="flex justify-between text-lg font-black border-t mt-2 pt-2"><span>實際應收</span><span>NT$ ${final.toLocaleString()}</span></div></div><div class="grid grid-cols-2 gap-3"><button onclick="batchPay('${ids}','${table}',${final},'現金')" class="py-4 bg-blue-900 text-white font-black">現金結帳</button><button onclick="batchPay('${ids}','${table}',${final},'銀行轉帳')" class="py-4 bg-blue-700 text-white font-black">銀行轉帳</button></div></div>`}else action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black">等待出單後解鎖結帳</button>';timeLog.textContent='';
     }
 
     async function batchPay(rowStr, table, totalAmount, payMethod) {
@@ -545,6 +548,16 @@ header,section>div,.sharp-card{box-shadow:none!important}
     function resetTableToEmpty(table) {
       delete optimisticPaidTables[table];
       allOrders = allOrders.filter(o => o && !(o.table === table && o.status === "已結帳"));
+      renderTableBill(table);
+      updateTableStatusBadges();
+    }
+
+    function resetCancelledTableToEmpty(table) {
+      allOrders.forEach(o => {
+        if (o && o.table === table && o.status === "未結帳" && o.cook === "已取消") {
+          clearedCancelledRows.add(o.row);
+        }
+      });
       renderTableBill(table);
       updateTableStatusBadges();
     }
