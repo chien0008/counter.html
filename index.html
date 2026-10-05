@@ -174,6 +174,58 @@ header,section>div,.sharp-card{box-shadow:none!important}
   </section>
 
 
+  <!-- POS 付款確認覆蓋層：真正送出結帳前可返回更改付款方式 -->
+  <div id="payment-confirm-overlay" class="hidden fixed inset-0 z-[60] bg-slate-950/60 p-4 sm:p-8 flex items-center justify-center">
+    <div class="w-full max-w-lg bg-white border-2 border-zinc-950 p-5 sm:p-6">
+      <div class="flex justify-between items-center border-b-2 border-zinc-950 pb-3 mb-5">
+        <div>
+          <p class="text-xs font-black text-zinc-500">POS 收款確認</p>
+          <h2 class="text-xl sm:text-2xl font-black">確認付款方式</h2>
+        </div>
+        <button onclick="closePaymentConfirm()" class="px-3 py-2 border border-zinc-950 bg-white font-black">✕</button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="border border-slate-300 bg-slate-50 p-4">
+          <div class="flex justify-between text-sm font-bold"><span>桌號</span><span id="payment-confirm-table">—</span></div>
+          <div class="flex justify-between items-end mt-2">
+            <span class="font-black">實際應收</span>
+            <span id="payment-confirm-total" class="text-3xl font-black font-mono text-blue-900">NT$ 0</span>
+          </div>
+        </div>
+
+        <div id="payment-method-step">
+          <p class="font-black mb-3">請選擇付款方式</p>
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="choosePaymentMethod('現金')" class="py-4 border-2 border-blue-900 bg-blue-900 text-white font-black text-lg">現金</button>
+            <button onclick="choosePaymentMethod('銀行轉帳')" class="py-4 border-2 border-blue-700 bg-blue-700 text-white font-black text-lg">銀行轉帳</button>
+          </div>
+          <button onclick="closePaymentConfirm()" class="w-full mt-3 py-3 border border-zinc-400 bg-white text-zinc-700 font-black">取消，返回帳單</button>
+        </div>
+
+        <div id="payment-final-step" class="hidden space-y-4">
+          <div class="border-2 border-blue-900 p-4">
+            <p class="text-xs font-bold text-zinc-500">付款方式</p>
+            <p id="payment-selected-method" class="text-2xl font-black text-blue-900">—</p>
+          </div>
+
+          <div id="payment-bank-field" class="hidden">
+            <label for="payment-bank-last5" class="block font-black mb-2">顧客轉帳帳號末 5 碼</label>
+            <input id="payment-bank-last5" type="text" inputmode="numeric" maxlength="5"
+                   placeholder="例如 88888"
+                   class="w-full border-2 border-zinc-950 px-4 py-3 text-xl font-black font-mono focus:outline-none">
+            <p class="mt-1 text-xs font-bold text-zinc-500">未提供時可留白，系統會以「未提供」存檔。</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="backToPaymentMethods()" class="py-4 border-2 border-zinc-950 bg-white text-zinc-950 font-black">← 返回更改</button>
+            <button id="payment-confirm-submit" onclick="confirmSelectedPayment()" class="py-4 border-2 border-blue-900 bg-blue-900 text-white font-black">確認收款</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 客人拍照用消費明細：不顯示 POS 操作內容 -->
   <div id="customer-receipt-overlay" class="hidden fixed inset-0 z-50 bg-white overflow-y-auto">
     <div class="max-w-3xl mx-auto min-h-screen p-5 sm:p-8">
@@ -557,20 +609,71 @@ header,section>div,.sharp-card{box-shadow:none!important}
       box.innerHTML=out;const a=getPosAdjustment(table),final=Math.round(subtotal*a.discountRate);document.getElementById('table-bill-total').textContent=`NT$ ${final.toLocaleString()}`;
       const allCancelled=cancelled.length>0&&cooked.length===0&&making.length===0;
       if(allCancelled)badge.textContent='本桌品項已全部取消';else if(cooked.length&&making.length)badge.textContent=`可結帳 ${cooked.length} 筆｜另有 ${making.length} 筆未出單`;else if(cooked.length)badge.textContent='可結帳';else badge.textContent='等待出單';
-      if(allCancelled){action.innerHTML=`<button onclick="resetCancelledTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black">翻桌（重設空桌）</button>`}else if(cooked.length){const ids=cooked.map(o=>o.row).join(',');action.innerHTML=`<div class="space-y-3">${discountPanelHtml(table,subtotal)}<div class="border p-3"><div class="flex justify-between"><span>有效消費</span><b>NT$ ${subtotal.toLocaleString()}</b></div>${a.discountRate<1?`<div class="flex justify-between text-red-700"><span>整單折扣</span><b>− NT$ ${(subtotal-final).toLocaleString()}</b></div>`:''}<div class="flex justify-between text-lg font-black border-t mt-2 pt-2"><span>實際應收</span><span>NT$ ${final.toLocaleString()}</span></div></div><div class="grid grid-cols-2 gap-3"><button onclick="batchPay('${ids}','${table}',${final},'現金')" class="py-4 bg-blue-900 text-white font-black">現金結帳</button><button onclick="batchPay('${ids}','${table}',${final},'銀行轉帳')" class="py-4 bg-blue-700 text-white font-black">銀行轉帳</button></div></div>`}else action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black">等待出單後解鎖結帳</button>';timeLog.textContent='';
+      if(allCancelled){action.innerHTML=`<button onclick="resetCancelledTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black">翻桌（重設空桌）</button>`}else if(cooked.length){const ids=cooked.map(o=>o.row).join(',');action.innerHTML=`<div class="space-y-3">${discountPanelHtml(table,subtotal)}<div class="border p-3"><div class="flex justify-between"><span>有效消費</span><b>NT$ ${subtotal.toLocaleString()}</b></div>${a.discountRate<1?`<div class="flex justify-between text-red-700"><span>整單折扣</span><b>− NT$ ${(subtotal-final).toLocaleString()}</b></div>`:''}<div class="flex justify-between text-lg font-black border-t mt-2 pt-2"><span>實際應收</span><span>NT$ ${final.toLocaleString()}</span></div></div><div class="grid grid-cols-2 gap-3"><button onclick="openPaymentConfirm('${ids}','${table}',${final},'現金')" class="py-4 bg-blue-900 text-white font-black">現金結帳</button><button onclick="openPaymentConfirm('${ids}','${table}',${final},'銀行轉帳')" class="py-4 bg-blue-700 text-white font-black">銀行轉帳</button></div></div>`}else action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black">等待出單後解鎖結帳</button>';timeLog.textContent='';
     }
 
-    async function batchPay(rowStr, table, totalAmount, payMethod) {
-      let bankLast5 = "";
+    let pendingPayment = null;
 
+    function openPaymentConfirm(rowStr, table, totalAmount, initialMethod) {
+      pendingPayment = { rowStr, table, totalAmount, payMethod: "" };
+      document.getElementById('payment-confirm-table').textContent = `${table} 桌`;
+      document.getElementById('payment-confirm-total').textContent = `NT$ ${Number(totalAmount || 0).toLocaleString()}`;
+      document.getElementById('payment-bank-last5').value = '';
+      document.getElementById('payment-method-step').classList.remove('hidden');
+      document.getElementById('payment-final-step').classList.add('hidden');
+      document.getElementById('payment-bank-field').classList.add('hidden');
+      document.getElementById('payment-confirm-overlay').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+
+      // 店員原本按哪一種，就直接進該付款方式的確認頁；仍可按「返回更改」。
+      if (initialMethod) choosePaymentMethod(initialMethod);
+    }
+
+    function choosePaymentMethod(method) {
+      if (!pendingPayment) return;
+      pendingPayment.payMethod = method;
+      document.getElementById('payment-selected-method').textContent = method;
+      document.getElementById('payment-method-step').classList.add('hidden');
+      document.getElementById('payment-final-step').classList.remove('hidden');
+
+      const isBank = method === '銀行轉帳';
+      document.getElementById('payment-bank-field').classList.toggle('hidden', !isBank);
+      document.getElementById('payment-confirm-submit').textContent = isBank ? '確認轉帳' : '確認收款';
+
+      if (isBank) setTimeout(() => document.getElementById('payment-bank-last5')?.focus(), 0);
+    }
+
+    function backToPaymentMethods() {
+      if (!pendingPayment) return;
+      pendingPayment.payMethod = "";
+      document.getElementById('payment-final-step').classList.add('hidden');
+      document.getElementById('payment-method-step').classList.remove('hidden');
+    }
+
+    function closePaymentConfirm() {
+      document.getElementById('payment-confirm-overlay').classList.add('hidden');
+      document.body.style.overflow = '';
+      pendingPayment = null;
+    }
+
+    async function confirmSelectedPayment() {
+      if (!pendingPayment || !pendingPayment.payMethod) return;
+
+      let bankLast5 = "";
+      if (pendingPayment.payMethod === "銀行轉帳") {
+        bankLast5 = document.getElementById('payment-bank-last5').value.trim();
+        if (!bankLast5) bankLast5 = "未提供";
+      }
+
+      const p = { ...pendingPayment };
+      closePaymentConfirm();
+      await batchPay(p.rowStr, p.table, p.totalAmount, p.payMethod, bankLast5);
+    }
+
+    async function batchPay(rowStr, table, totalAmount, payMethod, confirmedBankLast5 = null) {
+      let bankLast5 = "";
       if (payMethod === "銀行轉帳") {
-        const input = prompt("🏦 請輸入顧客轉帳的「帳號末 5 碼」以利核對（例如 88888）：");
-        if (input === null) return;
-        bankLast5 = input.trim();
-        if (!bankLast5) {
-          alert("⚠️ 提醒：未輸入末五碼，將預設為 [未提供] 存檔！");
-          bankLast5 = "未提供";
-        }
+        bankLast5 = String(confirmedBankLast5 ?? "").trim() || "未提供";
       }
 
       const rows = rowStr.split(',').map(r => parseInt(r));
