@@ -579,8 +579,8 @@ header,section>div,.sharp-card{box-shadow:none!important}
     function updateTableStatusBadges() {
       officialTableNames.forEach(t=>{
         const btn=document.getElementById(`btn-table-${t}`); if(!btn)return;
-        const unmade=allOrders.some(o=>o&&o.table===t&&o.status==="未結帳"&&o.cook==="未出單");
-        const cooked=allOrders.some(o=>o&&o.table===t&&o.status==="未結帳"&&o.cook==="已出單");
+        const unmade=posVisibleRows(t).some(o=>o.cook==="未出單");
+        const cooked=posVisibleRows(t).some(o=>o.cook==="已出單");
         const span=(t==="圓桌"||t==="包廂")?"col-span-2":"col-span-1";
         const base=`${span} py-3 text-base font-black border sharp-button`;
         if(t===activeTable)btn.className=`${base} bg-blue-900 text-white border-blue-900`;
@@ -610,20 +610,10 @@ header,section>div,.sharp-card{box-shadow:none!important}
       const now = new Date();
       return posBusinessDay(`${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}`);
     }
-    // 後端正式支援 sessionId 與 sessionClosed 後，以訂單批次精準篩選。
-    // 舊後端尚未提供批次欄位時，先使用營業日及有效品項做保守顯示，
-    // 不能保證同一營業日翻桌、重整或跨裝置後的取消單永久隱藏。
+    // 僅顯示尚未結束的桌次；同桌取消品項即使全部取消也保留至翻桌。
     function posVisibleRows(table) {
-      const rows = allOrders.filter(o => o && o.table === table && o.status === '未結帳' && !clearedCancelledRows.has(o.row));
-      const openRows = rows.filter(o => o.cook === '已出單' || o.cook === '未出單');
-      const withSession = rows.filter(o => o.sessionId != null && String(o.sessionId).trim());
-      if (withSession.length) {
-        const openSessions = new Set(openRows.filter(o => !o.sessionClosed && o.sessionId != null).map(o => String(o.sessionId)));
-        return rows.filter(o => !o.sessionClosed && (o.cook !== '已取消' || openSessions.has(String(o.sessionId))));
-      }
-      const today = currentPosBusinessDay();
-      const hasCurrentActive = openRows.some(o => posBusinessDay(o.time) === today);
-      return rows.filter(o => o.cook !== '已取消' || (hasCurrentActive && posBusinessDay(o.time) === today));
+      return allOrders.filter(o => o && o.table === table && o.status === '未結帳'
+        && o.sessionId && !o.sessionClosed);
     }
 
     function renderTableBill(table) {
@@ -776,14 +766,22 @@ header,section>div,.sharp-card{box-shadow:none!important}
       updateTableStatusBadges();
     }
 
-    function resetCancelledTableToEmpty(table) {
-      allOrders.forEach(o => {
-        if (o && o.table === table && o.status === "未結帳" && o.cook === "已取消") {
-          clearedCancelledRows.add(o.row);
-        }
-      });
-      renderTableBill(table);
-      updateTableStatusBadges();
+    async function resetCancelledTableToEmpty(table) {
+      const rows = posVisibleRows(table);
+      if (!rows.length || rows.some(o => o.cook !== '已取消')) {
+        alert('此桌仍有有效品項，不能直接翻桌。'); return;
+      }
+      const ids = [...new Set(rows.map(o => o.sessionId))];
+      if (ids.length !== 1) { alert('桌次資料異常，請重新整理。'); return; }
+      if (!confirm(`確定將 ${table} 桌翻桌？\n本組客人的取消紀錄將從 POS 永久移除，Google Sheet 仍完整保留。`)) return;
+      try {
+        const response = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({action:'closeTableSession',table,sessionId:ids[0]})});
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || '翻桌失敗');
+        await refreshData();
+        renderTableBill(table);
+      } catch(e) { alert('翻桌失敗：'+(e.message||e)); }
     }
 
     function initCounterTableGrid() {
