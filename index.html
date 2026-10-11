@@ -102,7 +102,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
           </h3>
           <span id="billing-status-badge" class="text-xs sm:text-sm px-3 py-1 rounded-full bg-zinc-200 text-zinc-700 font-bold border border-zinc-400">請先選桌</span>
         </div>
-        <div id="table-bill-items" class="space-y-3 max-h-[340px] overflow-y-auto pr-2 text-base compact-scroll">
+        <div id="table-bill-items" class="space-y-2 max-h-[70vh] overflow-y-auto pr-2 text-base compact-scroll">
           <p class="text-zinc-500 font-bold italic text-center py-20">請點擊左側桌號按鈕，系統將自動匯整該桌消費明細。</p>
         </div>
       </div>
@@ -596,14 +596,44 @@ header,section>div,.sharp-card{box-shadow:none!important}
       renderTableBill(table);
     }
 
+    // 營業時段 18:00–隔日 06:00。此函式僅供營業日歸屬，
+    // 不得以營業日切換取代「結帳／翻桌」的訂單批次結束事件。
+    function posBusinessDay(value) {
+      const match = String(value || '').match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
+      if (!match) return '';
+      const hour = Number(match[4] || 0);
+      const d = new Date(Number(match[1]), Number(match[2])-1, Number(match[3]));
+      if (hour < 6) d.setDate(d.getDate()-1);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function currentPosBusinessDay() {
+      const now = new Date();
+      return posBusinessDay(`${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}`);
+    }
+    // 後端正式支援 sessionId 與 sessionClosed 後，以訂單批次精準篩選。
+    // 舊後端尚未提供批次欄位時，先使用營業日及有效品項做保守顯示，
+    // 不能保證同一營業日翻桌、重整或跨裝置後的取消單永久隱藏。
+    function posVisibleRows(table) {
+      const rows = allOrders.filter(o => o && o.table === table && o.status === '未結帳' && !clearedCancelledRows.has(o.row));
+      const openRows = rows.filter(o => o.cook === '已出單' || o.cook === '未出單');
+      const withSession = rows.filter(o => o.sessionId != null && String(o.sessionId).trim());
+      if (withSession.length) {
+        const openSessions = new Set(openRows.filter(o => !o.sessionClosed && o.sessionId != null).map(o => String(o.sessionId)));
+        return rows.filter(o => !o.sessionClosed && (o.cook !== '已取消' || openSessions.has(String(o.sessionId))));
+      }
+      const today = currentPosBusinessDay();
+      const hasCurrentActive = openRows.some(o => posBusinessDay(o.time) === today);
+      return rows.filter(o => o.cook !== '已取消' || (hasCurrentActive && posBusinessDay(o.time) === today));
+    }
+
     function renderTableBill(table) {
       document.getElementById('current-selected-table').textContent=`${table} 桌`;
       const box=document.getElementById('table-bill-items'),action=document.getElementById('action-buttons-zone'),timeLog=document.getElementById('time-log-display'),badge=document.getElementById('billing-status-badge'),paid=optimisticPaidTables[table];
-      const rows=paid?[]:allOrders.filter(o=>o&&o.table===table&&o.status==='未結帳'&&!clearedCancelledRows.has(o.row)),cooked=rows.filter(o=>o.cook==='已出單'),making=rows.filter(o=>o.cook==='未出單'),cancelled=rows.filter(o=>o.cook==='已取消');
+      const rows=paid?[]:posVisibleRows(table),cooked=rows.filter(o=>o.cook==='已出單'),making=rows.filter(o=>o.cook==='未出單'),cancelled=rows.filter(o=>o.cook==='已取消');
       if(paid){box.innerHTML=`<div class="border border-green-700"><div class="bg-green-50 text-green-800 px-4 py-2 font-black">已結帳</div>${paid.items.map(x=>`<div class="p-3 border-t line-through">${escapeHtml(x)}</div>`).join('')}</div>`;document.getElementById('table-bill-total').textContent=`NT$ ${paid.total.toLocaleString()}`;badge.textContent=`已結清（${paid.payMethod}）`;action.innerHTML=`<div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onclick="openCustomerReceipt('${table}')" class="w-full py-4 bg-white text-blue-900 border-2 border-blue-900 font-black">顯示客人消費明細</button><button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black">下一組客人（重設空桌）</button></div>`;timeLog.textContent=`結帳時間：${paid.payTime||'剛剛完成'}`;return;}
       if(!rows.length){box.innerHTML='<p class="text-zinc-500 font-bold text-center py-20">該桌目前無任何未結帳單。</p>';document.getElementById('table-bill-total').textContent='NT$ 0';badge.textContent='無開單';action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black">目前無可結帳品項</button>';timeLog.textContent='';return;}
       let subtotal=cooked.reduce((s,o)=>s+moneyOf(o),0),out='';
-      if(cooked.length){out+='<div class="border border-green-700"><div class="px-4 py-2 font-black text-green-800 bg-green-50">已出單｜可結帳</div>';groupPosRows(cooked).forEach((g,i)=>{const id=`pos-detail-${i}`;out+=`<div class="border-t border-green-200"><div class="flex justify-between items-center px-4 py-3"><div><p class="font-black">${escapeHtml(g.name)} <span class="text-blue-900">×${g.rows.length}</span></p>${g.note?`<p class="text-xs text-red-700 font-black">備註：${escapeHtml(g.note)}</p>`:''}<button onclick="togglePosGroup('${id}')" class="text-xs text-blue-800 underline font-black">查看 ${g.rows.length} 筆原始明細</button></div><span class="font-mono font-black">NT$ ${(g.price*g.rows.length).toLocaleString()}</span></div><div id="${id}" class="hidden bg-slate-50 border-t">${g.rows.map((o,j)=>`<div class="flex justify-between items-center px-4 py-2 border-b"><div class="text-xs"><p class="font-black">第 ${j+1} 筆｜${posTimeLabel(o.time)}</p><p>Sheet row ${o.row}</p></div><div class="flex gap-3 items-center"><span class="font-mono">NT$ ${moneyOf(o).toLocaleString()}</span><button onclick="cancelPosOrder(${o.row})" class="px-3 py-1 border border-red-600 text-red-700 bg-white text-xs font-black">取消此筆</button></div></div>`).join('')}</div></div>`});out+='</div>';}
+      if(cooked.length){out+='<div class="border border-green-700"><div class="px-4 py-2 font-black text-green-800 bg-green-50">已出單｜可結帳</div>';groupPosRows(cooked).forEach((g,i)=>{const id=`pos-detail-${i}`;out+=`<div class="border-t border-green-200"><div class="flex justify-between items-center gap-3 px-3 py-1.5"><div class="min-w-0"><div class="flex flex-wrap items-center gap-x-2 gap-y-0.5"><p class="font-black">${escapeHtml(g.name)} <span class="text-blue-900">×${g.rows.length}</span></p><button onclick="togglePosGroup('${id}')" class="text-xs text-blue-800 underline font-black whitespace-nowrap">查看原始明細 (${g.rows.length})</button></div>${g.note?`<p class="text-xs text-red-700 font-black">備註：${escapeHtml(g.note)}</p>`:''}</div><span class="font-mono font-black shrink-0">NT$ ${(g.price*g.rows.length).toLocaleString()}</span></div><div id="${id}" class="hidden bg-slate-50 border-t">${g.rows.map((o,j)=>`<div class="flex justify-between items-center px-4 py-2 border-b"><div class="text-xs"><p class="font-black">第 ${j+1} 筆｜${posTimeLabel(o.time)}</p><p>Sheet row ${o.row}</p></div><div class="flex gap-3 items-center"><span class="font-mono">NT$ ${moneyOf(o).toLocaleString()}</span><button onclick="cancelPosOrder(${o.row})" class="px-3 py-1 border border-red-600 text-red-700 bg-white text-xs font-black">取消此筆</button></div></div>`).join('')}</div></div>`});out+='</div>';}
       if(cancelled.length){out+='<div class="mt-4 border border-slate-500"><div class="px-4 py-2 font-black bg-slate-100">已取消｜不計入應收</div>'+cancelled.map(o=>`<div class="flex justify-between items-center px-4 py-3 border-t"><div><p class="font-black line-through">${escapeHtml(cleanItemName(o.item))}</p><p class="text-xs text-red-700 font-black">${escapeHtml(o.cancelReason||'已取消')}${o.cancelNote?'｜'+escapeHtml(o.cancelNote):''}</p></div><div class="flex gap-2"><span class="line-through">NT$ ${moneyOf(o).toLocaleString()}</span><button onclick="restorePosCancelled(${o.row})" class="border px-2 text-xs font-black">復原取消</button></div></div>`).join('')+'</div>';}
       if(making.length){out+='<div class="mt-4 border border-red-600"><div class="px-4 py-2 font-black text-red-700 bg-red-50">尚未出單｜不計入本次帳單</div>'+groupPosRows(making).map(g=>`<div class="flex justify-between px-4 py-3 border-t"><p class="font-black">${escapeHtml(g.name)} ×${g.rows.length}</p><span class="text-red-700 font-black">未出單</span></div>`).join('')+'</div>';}
       box.innerHTML=out;const a=getPosAdjustment(table),final=Math.round(subtotal*a.discountRate);document.getElementById('table-bill-total').textContent=`NT$ ${final.toLocaleString()}`;
