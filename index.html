@@ -1049,10 +1049,10 @@ header,section>div,.sharp-card{box-shadow:none!important}
           body: JSON.stringify({ action: "updateStatus", row: row, type: "cancel_order" })
         });
         const result = await response.json();
-        if (!result.success) throw new Error();
-        refreshData();
+        if (!result.success) throw new Error(result.error || "後端拒絕取消");
+        await refreshData();
       } catch (e) {
-        alert("🚨 取消失敗：後端拒絕或網路異常，品項已重新復原！");
+        alert("🚨 取消失敗：" + (e.message || String(e)) + "。畫面已復原，請確認 Apps Script 部署版本。");
         allOrders = bakOrders;
         renderKDS();
       }
