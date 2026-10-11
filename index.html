@@ -613,7 +613,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
     // 僅顯示尚未結束的桌次；同桌取消品項即使全部取消也保留至翻桌。
     function posVisibleRows(table) {
       return allOrders.filter(o => o && o.table === table && o.status === '未結帳'
-        && o.sessionId && !o.sessionClosed);
+        && !o.sessionClosed && (o.sessionId || o.cook === '已出單' || o.cook === '未出單'));
     }
 
     function renderTableBill(table) {
