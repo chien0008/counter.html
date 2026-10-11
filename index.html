@@ -102,7 +102,7 @@ header,section>div,.sharp-card{box-shadow:none!important}
           </h3>
           <span id="billing-status-badge" class="text-xs sm:text-sm px-3 py-1 rounded-full bg-zinc-200 text-zinc-700 font-bold border border-zinc-400">請先選桌</span>
         </div>
-        <div id="table-bill-items" class="space-y-2 max-h-[70vh] overflow-y-auto pr-2 text-base compact-scroll">
+        <div id="table-bill-items" class="space-y-2 max-h-[340px] overflow-y-auto pr-2 text-base compact-scroll">
           <p class="text-zinc-500 font-bold italic text-center py-20">請點擊左側桌號按鈕，系統將自動匯整該桌消費明細。</p>
         </div>
       </div>
@@ -579,8 +579,8 @@ header,section>div,.sharp-card{box-shadow:none!important}
     function updateTableStatusBadges() {
       officialTableNames.forEach(t=>{
         const btn=document.getElementById(`btn-table-${t}`); if(!btn)return;
-        const unmade=posVisibleRows(t).some(o=>o.cook==="未出單");
-        const cooked=posVisibleRows(t).some(o=>o.cook==="已出單");
+        const unmade=allOrders.some(o=>o&&o.table===t&&o.status==="未結帳"&&o.cook==="未出單");
+        const cooked=allOrders.some(o=>o&&o.table===t&&o.status==="未結帳"&&o.cook==="已出單");
         const span=(t==="圓桌"||t==="包廂")?"col-span-2":"col-span-1";
         const base=`${span} py-3 text-base font-black border sharp-button`;
         if(t===activeTable)btn.className=`${base} bg-blue-900 text-white border-blue-900`;
@@ -596,30 +596,10 @@ header,section>div,.sharp-card{box-shadow:none!important}
       renderTableBill(table);
     }
 
-    // 營業時段 18:00–隔日 06:00。此函式僅供營業日歸屬，
-    // 不得以營業日切換取代「結帳／翻桌」的訂單批次結束事件。
-    function posBusinessDay(value) {
-      const match = String(value || '').match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
-      if (!match) return '';
-      const hour = Number(match[4] || 0);
-      const d = new Date(Number(match[1]), Number(match[2])-1, Number(match[3]));
-      if (hour < 6) d.setDate(d.getDate()-1);
-      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
-    function currentPosBusinessDay() {
-      const now = new Date();
-      return posBusinessDay(`${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}`);
-    }
-    // 僅顯示尚未結束的桌次；同桌取消品項即使全部取消也保留至翻桌。
-    function posVisibleRows(table) {
-      return allOrders.filter(o => o && o.table === table && o.status === '未結帳'
-        && !o.sessionClosed && (o.sessionId || o.cook === '已出單' || o.cook === '未出單'));
-    }
-
     function renderTableBill(table) {
       document.getElementById('current-selected-table').textContent=`${table} 桌`;
       const box=document.getElementById('table-bill-items'),action=document.getElementById('action-buttons-zone'),timeLog=document.getElementById('time-log-display'),badge=document.getElementById('billing-status-badge'),paid=optimisticPaidTables[table];
-      const rows=paid?[]:posVisibleRows(table),cooked=rows.filter(o=>o.cook==='已出單'),making=rows.filter(o=>o.cook==='未出單'),cancelled=rows.filter(o=>o.cook==='已取消');
+      const rows=paid?[]:allOrders.filter(o=>o&&o.table===table&&o.status==='未結帳'&&!clearedCancelledRows.has(o.row)),cooked=rows.filter(o=>o.cook==='已出單'),making=rows.filter(o=>o.cook==='未出單'),cancelled=rows.filter(o=>o.cook==='已取消');
       if(paid){box.innerHTML=`<div class="border border-green-700"><div class="bg-green-50 text-green-800 px-4 py-2 font-black">已結帳</div>${paid.items.map(x=>`<div class="p-3 border-t line-through">${escapeHtml(x)}</div>`).join('')}</div>`;document.getElementById('table-bill-total').textContent=`NT$ ${paid.total.toLocaleString()}`;badge.textContent=`已結清（${paid.payMethod}）`;action.innerHTML=`<div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><button onclick="openCustomerReceipt('${table}')" class="w-full py-4 bg-white text-blue-900 border-2 border-blue-900 font-black">顯示客人消費明細</button><button onclick="resetTableToEmpty('${table}')" class="w-full py-4 bg-blue-900 text-white font-black">下一組客人（重設空桌）</button></div>`;timeLog.textContent=`結帳時間：${paid.payTime||'剛剛完成'}`;return;}
       if(!rows.length){box.innerHTML='<p class="text-zinc-500 font-bold text-center py-20">該桌目前無任何未結帳單。</p>';document.getElementById('table-bill-total').textContent='NT$ 0';badge.textContent='無開單';action.innerHTML='<button disabled class="w-full py-4 bg-zinc-200 text-zinc-500 font-black">目前無可結帳品項</button>';timeLog.textContent='';return;}
       let subtotal=cooked.reduce((s,o)=>s+moneyOf(o),0),out='';
@@ -766,22 +746,14 @@ header,section>div,.sharp-card{box-shadow:none!important}
       updateTableStatusBadges();
     }
 
-    async function resetCancelledTableToEmpty(table) {
-      const rows = posVisibleRows(table);
-      if (!rows.length || rows.some(o => o.cook !== '已取消')) {
-        alert('此桌仍有有效品項，不能直接翻桌。'); return;
-      }
-      const ids = [...new Set(rows.map(o => o.sessionId))];
-      if (ids.length !== 1) { alert('桌次資料異常，請重新整理。'); return; }
-      if (!confirm(`確定將 ${table} 桌翻桌？\n本組客人的取消紀錄將從 POS 永久移除，Google Sheet 仍完整保留。`)) return;
-      try {
-        const response = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({action:'closeTableSession',table,sessionId:ids[0]})});
-        const result = await response.json();
-        if (!result.success) throw new Error(result.error || '翻桌失敗');
-        await refreshData();
-        renderTableBill(table);
-      } catch(e) { alert('翻桌失敗：'+(e.message||e)); }
+    function resetCancelledTableToEmpty(table) {
+      allOrders.forEach(o => {
+        if (o && o.table === table && o.status === "未結帳" && o.cook === "已取消") {
+          clearedCancelledRows.add(o.row);
+        }
+      });
+      renderTableBill(table);
+      updateTableStatusBadges();
     }
 
     function initCounterTableGrid() {
@@ -1049,10 +1021,10 @@ header,section>div,.sharp-card{box-shadow:none!important}
           body: JSON.stringify({ action: "updateStatus", row: row, type: "cancel_order" })
         });
         const result = await response.json();
-        if (!result.success) throw new Error(result.error || "後端拒絕取消");
-        await refreshData();
+        if (!result.success) throw new Error();
+        refreshData();
       } catch (e) {
-        alert("🚨 取消失敗：" + (e.message || String(e)) + "。畫面已復原，請確認 Apps Script 部署版本。");
+        alert("🚨 取消失敗：後端拒絕或網路異常，品項已重新復原！");
         allOrders = bakOrders;
         renderKDS();
       }
